@@ -40,3 +40,6 @@ git push
 更新時
 git pull
 
+
+
+あああ
