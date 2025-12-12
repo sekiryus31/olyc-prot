@@ -27,4 +27,16 @@ ctrl+C
 deactivate
 
 
+トークン
+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
+
+
+git
+git add .
+git commit -m "update"
+git push
+
+
+更新時
+git pull
 
