@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/hotels.css">
+  <title>ホテル一覧</title>
+
+</head>
+<body>
+  <h1>ホテル一覧</h1>
+  <p>API から取得したデータをテーブルに表示しています。</p>
+  <button id="updateBtn">更新</button>
+  <a href="create.html"><button>新規登録</button></a>
+
+  <table id="hotel-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>ホテル名</th>
+        <th>コード</th>
+        <th>住所</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- JS でここに行を追加する -->
+    </tbody>
+  </table>
+
+
+  <script src="../js/common.js"></script>
+  <script src="../js/hotels.js"></script>
+  <script>
+    // ページ表示時に一覧読み込み
+    loadHotels();
+    // 更新ボタン押下
+    document.getElementById("updateBtn").addEventListener("click", loadHotels);
+ 
+  </script>
+</body>
+</html>

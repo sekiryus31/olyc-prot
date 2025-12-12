@@ -1,0 +1,30 @@
+
+
+f:
+cd F:\TechField\forespia\olyc
+venv\Scripts\activate.bat
+
+
+(venv) F:\TechField\forespia\olyc
+
+
+cd backend\app\
+
+
+python -m uvicorn main:app --reload
+
+
+ホテル画面
+http://127.0.0.1:8000/static/hotel/list.html
+
+ 
+
+ 
+停止
+ctrl+C
+
+仮想環境停止
+deactivate
+
+
+

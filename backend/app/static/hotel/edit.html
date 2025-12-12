@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/hotels.css">
+  <title>ホテル情報編集</title>
+
+</head>
+<body>
+    <h1>ホテル編集</h1>
+
+    <form id="hotel-form">
+      <input type="text" id="id" hidden>
+      <label>ホテル名</label>
+      <input type="text" id="name" required>
+  
+      <label>コード</label>
+      <input type="text" id="code">
+  
+      <label>住所</label>
+      <input type="text" id="address">
+  
+      <button id="update-Btn" type="submit">更新する</button>
+    </form>
+  
+    <a id="back-link" href="list.html">← 詳細画面へ</a>
+    <a href="list.html">← ホテル一覧へ戻る</a>
+
+
+  <script src="../js/common.js"></script>
+  <script src="../js/hotels.js"></script>
+  <script>
+    // ページ表示時に情報読み込み
+    loadHotelEdit();
+    // 更新ボタン押下
+    document.getElementById("update-Btn").addEventListener("click", updateHotel);
+ 
+ </script>
+</body>
+</html>
