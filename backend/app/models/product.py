@@ -13,6 +13,10 @@ from models.enums import OrderStatus, PaymentMethod, BillingPartyType
 from db.base import Base
 
 
+order_items = relationship("OrderItem", back_populates="product")
+
+
+
 # ==============================
 # 2. 商品管理系
 # ==============================
@@ -27,20 +31,21 @@ class ProductCategory(Base):
     # products = relationship("Product", back_populates="category")
 
 
+
 class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), unique=True, nullable=True)
     name = Column(String(255), nullable=False)
-    description = Column(String(1000), nullable=True)
 
     category_id = Column(Integer, ForeignKey("product_categories.id"), nullable=True)
-    base_price = Column(Numeric(10, 2), nullable=False)
-    tax_rate = Column(Numeric(4, 2), nullable=True)
+    price = Column(Numeric(10, 2), nullable=False)
 
     # 特定ホテル専用の商品にしたい場合
     hotel_id = Column(Integer, ForeignKey("hotels.id"), nullable=True)
+
+    description = Column(String(1000), nullable=True)
 
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(),

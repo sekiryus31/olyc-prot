@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>クリーニング依頼</title>
+</head>
+<body>
+  <h1 id="hotel-title">クリーニング依頼</h1>
+
+  <div>
+    <label for="category-select">カテゴリー：</label>
+    <select id="category-select"></select>
+  </div>
+
+  <table border="1">
+    <thead>
+      <tr>
+        <th>品目</th>
+        <th>単価</th>
+        <th>数量</th>
+      </tr>
+    </thead>
+    <tbody id="product-tbody"></tbody>
+  </table>
+
+  <div>
+    <label for="remark">備考：</label><br />
+    <textarea id="remark" rows="3" cols="40"></textarea>
+  </div>
+
+  <button id="submit-btn">この内容で依頼する</button>
+
+  <script src="orders_new.js"></script>
+</body>
+</html>

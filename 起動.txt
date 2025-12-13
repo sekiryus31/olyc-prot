@@ -42,4 +42,5 @@ git pull
 
 
 
-あああ
+macでの管理場所
+cd Desktop/TechField/forespia/olyc/olyc-prot

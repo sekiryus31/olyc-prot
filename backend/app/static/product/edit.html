@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/product.css">
+  <title>商品情報編集</title>
+
+</head>
+<body>
+    <h1>商品編集</h1>
+
+    <form id="hotel-form">
+      <input type="text" id="id" hidden>
+      <label>商品名</label>
+      <input type="text" id="name" required>
+  
+      <label>コード</label>
+      <input type="text" id="code">
+  
+      <label>単価</label>
+      <input type="text" id="price">
+
+      <label>カテゴリー</label>
+      <input type="text" id="category_id">
+
+      <label>備考</label>
+      <input type="text" id="description">
+  
+      <button id="update-Btn" type="submit">更新する</button>
+    </form>
+  
+    <a id="back-link" href="list.html">← 詳細画面へ</a>
+    <a href="list.html">← 商品一覧へ戻る</a>
+
+
+  <script src="../js/common.js"></script>
+  <script src="../js/products.js"></script>
+  <script>
+    // ページ表示時に情報読み込み
+    loadProductEdit();
+    // 更新ボタン押下
+    document.getElementById("update-Btn").addEventListener("click", updateProduct);
+ 
+ </script>
+</body>
+</html>

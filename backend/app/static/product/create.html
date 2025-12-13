@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/product.css">
+  <title>商品登録</title>
+</head>
+<body>
+
+  <h1>商品登録</h1>
+
+  <form id="product-form">
+    <label>商品名</label>
+    <input type="text" id="name" required>
+
+    <label>コード</label>
+    <input type="text" id="code">
+
+    <label>カテゴリー</label>
+    <input type="text" id="category_id">
+
+    <label>値段</label>
+    <input type="text" id="price">
+
+    <label>備考</label>
+    <input type="text" id="description">
+
+    <button id="create-btn" type="submit">登録</button>
+  </form>
+
+  <a href="list.html">← ホテル一覧へ戻る</a>
+
+  <script>
+   
+  </script>
+  <script src="../js/common.js"></script>
+  <script src="../js/products.js"></script>
+  <script>
+    // 登録ボタン押下
+    // document.getElementById("create-btn").addEventListener("click", createProduct);
+  </script>
+
+</body>
+</html>

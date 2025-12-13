@@ -12,7 +12,7 @@ from models.enums import OrderStatus, PaymentMethod, BillingPartyType
 
 from db.base import Base
 
-
+orders = relationship("Order", back_populates="hotel")
 
 # ==============================
 # 1. ホテル管理系

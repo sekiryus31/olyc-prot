@@ -1,0 +1,32 @@
+# # routers/product_router.py の一部
+# from fastapi import APIRouter, Depends
+# from sqlalchemy.orm import Session
+# from ..db import get_db
+# from ..models.product import Product
+
+# router = APIRouter(prefix="/api/v1/products", tags=["products"])
+
+
+# @router.get("")
+# def list_products(hotel_id: int, db: Session = Depends(get_db)):
+#     """
+#     ?hotel_id=1 で、そのホテル向けの商品を全部返す。
+#     カテゴリは product.category をフロント側で利用。
+#     """
+#     products = (
+#         db.query(Product)
+#         .filter(Product.hotel_id == hotel_id)
+#         .order_by(Product.category, Product.id)
+#         .all()
+#     )
+
+#     # 最小の dict にして返す
+#     return [
+#         {
+#             "id": p.id,
+#             "name": p.name,
+#             "price": p.price,
+#             "category": p.category,
+#         }
+#         for p in products
+#     ]
