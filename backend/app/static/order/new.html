@@ -12,7 +12,7 @@
     <select id="category-select"></select>
   </div>
 
-  <table border="1">
+  <!-- <table border="1">
     <thead>
       <tr>
         <th>品目</th>
@@ -21,7 +21,21 @@
       </tr>
     </thead>
     <tbody id="product-tbody"></tbody>
-  </table>
+  </table> -->
+
+  <input id="hotel-id" placeholder="hotel_id" />
+  <button id="load-products">商品を読み込む</button>
+
+  <div id="products-root"></div>
+
+  <hr />
+  <div>
+    <h3>選択中</h3>
+    <ul id="selected-list"></ul>
+    <div>合計：<span id="total-price">0</span> 円</div>
+  </div>
+
+
 
   <div>
     <label for="remark">備考：</label><br />

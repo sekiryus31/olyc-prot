@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>商品カテゴリ一覧</title>
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/category.css">
+</head>
+<body>
+  <h1>商品カテゴリ</h1>
+  <div class="toolbar">
+    <input id="q" placeholder="検索（code / name）" />
+    <button id="reload-btn" class="secondary">再読み込み</button>
+    <div id="status" class="status"></div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 10px; font-size:16px;">新規カテゴリ作成</h2>
+    <div class="row">
+      <div>
+        <label>code（必須・ユニーク）</label>
+        <input id="code" placeholder="例：FOOD" />
+      </div>
+      <div>
+        <label>name（必須）</label>
+        <input id="name" placeholder="例：食品" />
+      </div>
+      <div>
+        <label>sort_order（任意）</label>
+        <input id="sort_order" type="number" placeholder="例：10" />
+      </div>
+    </div>
+    <div style="margin-top:10px;">
+      <button id="create-btn">作成</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 10px; font-size:16px;">一覧</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>sort</th>
+          <th>code</th>
+          <th>name</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script src="../js/common.js"></script>
+  <script src="../js/categories.js"></script>
+</body>
+</html>

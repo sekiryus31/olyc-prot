@@ -150,5 +150,107 @@ async function submitOrder() {
   }
 }
 
+
+const root = document.getElementById("products-root");
+const selectedList = document.getElementById("selected-list");
+const totalPriceEl = document.getElementById("total-price");
+
+let selected = new Map(); // product_id => { id, name, price, quantity }
+
+document.getElementById("load-products").addEventListener("click", async () => {
+  const hotelId = Number(document.getElementById("hotel-id").value);
+  if (!hotelId) {
+    alert("hotel_id を入れてね");
+    return;
+  }
+
+  const res = await fetch(`/api/v1/products?hotel_id=${hotelId}`);
+  const products = await res.json();
+
+  renderProducts(products);
+});
+
+function renderProducts(products) {
+  root.innerHTML = "";
+
+  // category_name でグループ化
+  const groups = new Map(); // category_name => products[]
+  for (const p of products) {
+    const key = p.category_name ?? "未分類";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(p);
+  }
+
+  for (const [catName, items] of groups.entries()) {
+    const section = document.createElement("div");
+    section.innerHTML = `<h3>${escapeHtml(catName)}</h3>`;
+    const ul = document.createElement("ul");
+
+    for (const p of items) {
+      const li = document.createElement("li");
+
+      // チェック + 数量
+      li.innerHTML = `
+        <label style="display:flex; gap:12px; align-items:center;">
+          <input type="checkbox" data-product-id="${p.id}">
+          <span>${escapeHtml(p.name)}</span>
+          <span style="margin-left:auto;">${Number(p.price).toLocaleString()}円</span>
+          <input type="number" min="1" value="1" data-qty-id="${p.id}" style="width:70px;">
+        </label>
+      `;
+
+      ul.appendChild(li);
+
+      // イベント
+      const checkbox = li.querySelector(`input[type="checkbox"][data-product-id="${p.id}"]`);
+      const qtyInput = li.querySelector(`input[type="number"][data-qty-id="${p.id}"]`);
+
+      checkbox.addEventListener("change", () => {
+        const qty = Number(qtyInput.value || 1);
+        if (checkbox.checked) {
+          selected.set(p.id, { id: p.id, name: p.name, price: Number(p.price), quantity: qty });
+        } else {
+          selected.delete(p.id);
+        }
+        renderSelected();
+      });
+
+      qtyInput.addEventListener("change", () => {
+        if (!selected.has(p.id)) return;
+        const item = selected.get(p.id);
+        item.quantity = Math.max(1, Number(qtyInput.value || 1));
+        selected.set(p.id, item);
+        renderSelected();
+      });
+    }
+
+    section.appendChild(ul);
+    root.appendChild(section);
+  }
+}
+
+function renderSelected() {
+  selectedList.innerHTML = "";
+  let total = 0;
+
+  for (const item of selected.values()) {
+    total += item.price * item.quantity;
+    const li = document.createElement("li");
+    li.textContent = `${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()}円`;
+    selectedList.appendChild(li);
+  }
+
+  totalPriceEl.textContent = total.toLocaleString();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  }[m]));
+}
+
+
+
+
 // ページロード時に初期化
 init();

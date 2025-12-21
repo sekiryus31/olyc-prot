@@ -1,26 +1,40 @@
-from pydantic import BaseModel
+# app/schemas/hotel.py
+from pydantic import BaseModel, ConfigDict
+from typing import Optional
 
 
 class HotelBase(BaseModel):
+    code: str
     name: str
-    code: str | None = None
-    address: str | None = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    operator_id: Optional[int] = None
 
 
 class HotelCreate(HotelBase):
     pass
 
 
-class HotelUpdate(HotelBase):
-    pass
+class HotelUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    operator_id: Optional[int] = None
 
 
-class HotelInDBBase(HotelBase):
+class HotelRead(HotelBase):
     id: int
 
-    class Config:
-        from_attributes = True  # SQLAlchemyモデルからの読み取り用（Pydantic v2系）
+    # Pydantic v2 用（v1なら Config = orm_mode = True）
+    model_config = ConfigDict(from_attributes=True)
 
 
-class Hotel(HotelInDBBase):
-    pass
+class HotelOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    code: Optional[str] = None
+    name: str
+    address: Optional[str] = None
+    phone: Optional[str] = None

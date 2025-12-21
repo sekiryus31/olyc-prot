@@ -8,23 +8,31 @@
 
 </head>
 <body>
-  <h1>ホテル一覧</h1>
-  <p>API から取得したデータをテーブルに表示しています。</p>
-  <button id="updateBtn">更新</button>
-  <a href="create.html"><button>新規登録</button></a>
+  <header>
+    <div>
+      <h1>ホテル一覧</h1>
+      <div class="muted">クリックで詳細へ</div>
+    </div>
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="コード/ホテル名で検索" />
+      <button id="reloadBtn">再読み込み</button>
+      <button id="newBtn">新規登録</button>
+    </div>
+  </header>
 
-  <table id="hotel-table">
+
+  <div id="status" class=""></div>
+  <table id="tbl" style="display:none;">
     <thead>
       <tr>
         <th>ID</th>
-        <th>ホテル名</th>
         <th>コード</th>
+        <th>ホテル名</th>
         <th>住所</th>
+        <th>電話</th>
       </tr>
     </thead>
-    <tbody>
-      <!-- JS でここに行を追加する -->
-    </tbody>
+    <tbody id="tbody"></tbody>
   </table>
 
 
@@ -32,10 +40,14 @@
   <script src="../js/hotels.js"></script>
   <script>
     // ページ表示時に一覧読み込み
-    loadHotels();
-    // 更新ボタン押下
-    document.getElementById("updateBtn").addEventListener("click", loadHotels);
- 
+    window.loadHotels = async function () {
+      console.log("loadHotels start");
+    };
+
+    document.getElementById("reloadBtn").addEventListener("click", () => loadHotels());
+    document.getElementById("newBtn").addEventListener("click", () => {
+        location.href = "create.html";
+    });
   </script>
 </body>
 </html>
