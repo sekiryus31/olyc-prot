@@ -9,6 +9,8 @@ from db.base import Base
 from db.session import engine
 
 from models.hotel import Hotel
+from models.product_category import ProductCategory
+from models.product import Product
 
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path

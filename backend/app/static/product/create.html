@@ -6,40 +6,61 @@
   <link rel="stylesheet" href="../style/product.css">
   <title>商品登録</title>
 </head>
-<body>
 
-  <h1>商品登録</h1>
+<body data-page="product-new">
+  <header>
+    <div>
+      <h1>商品 新規登録</h1>
+      <div class="muted">入力して登録</div>
+    </div>
 
-  <form id="product-form">
-    <label>商品名</label>
-    <input type="text" id="name" required>
+    <div class="toolbar">
+      <button id="backBtn">一覧へ戻る</button>
+      <button id="saveBtn">登録</button>
+    </div>
+  </header>
 
-    <label>コード</label>
-    <input type="text" id="code">
+  <div id="status" class=""></div>
 
-    <label>カテゴリー</label>
-    <input type="text" id="category_id">
+  <form id="form">
+    <div class="form-grid">
+      <label class="field">
+        <div class="label">コード（任意 / SKU）</div>
+        <input id="code" type="text" maxlength="50" placeholder="例：SKU-001" />
+      </label>
 
-    <label>値段</label>
-    <input type="text" id="price">
+      <label class="field">
+        <div class="label">商品名（必須）</div>
+        <input id="name" type="text" maxlength="255" required placeholder="例：ワイシャツ" />
+      </label>
 
-    <label>備考</label>
-    <input type="text" id="description">
+      <label class="field">
+        <div class="label">カテゴリ（任意）</div>
+        <select id="category_id">
+          <option value="">未指定</option>
+        </select>
+      </label>
 
-    <button id="create-btn" type="submit">登録</button>
+      <label class="field">
+        <div class="label">価格（必須）</div>
+        <input id="price" type="number" min="0" step="0.01" required placeholder="例：1200" />
+      </label>
+
+      <label class="field">
+        <div class="label">ホテル（任意 / 未指定なら共通商品）</div>
+        <select id="hotel_id">
+          <option value="">共通（未指定）</option>
+        </select>
+      </label>
+
+      <label class="field field-wide">
+        <div class="label">説明（任意）</div>
+        <textarea id="description" rows="4" maxlength="1000" placeholder="補足説明"></textarea>
+      </label>
+    </div>
   </form>
 
-  <a href="list.html">← ホテル一覧へ戻る</a>
-
-  <script>
-   
-  </script>
   <script src="../js/common.js"></script>
   <script src="../js/products.js"></script>
-  <script>
-    // 登録ボタン押下
-    // document.getElementById("create-btn").addEventListener("click", createProduct);
-  </script>
-
 </body>
 </html>

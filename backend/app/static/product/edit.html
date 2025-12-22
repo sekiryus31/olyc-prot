@@ -7,41 +7,70 @@
   <title>商品情報編集</title>
 
 </head>
-<body>
-    <h1>商品編集</h1>
 
-    <form id="hotel-form">
-      <input type="text" id="id" hidden>
-      <label>商品名</label>
-      <input type="text" id="name" required>
-  
-      <label>コード</label>
-      <input type="text" id="code">
-  
-      <label>単価</label>
-      <input type="text" id="price">
+<body data-page="product-edit">
+  <header>
+    <div>
+      <h1>商品 編集</h1>
+      <div class="muted">内容を変更して保存</div>
+    </div>
 
-      <label>カテゴリー</label>
-      <input type="text" id="category_id">
+    <div class="toolbar">
+      <button id="backBtn">詳細へ戻る</button>
+      <button id="saveBtn">保存</button>
+    </div>
+  </header>
 
-      <label>備考</label>
-      <input type="text" id="description">
-  
-      <button id="update-Btn" type="submit">更新する</button>
-    </form>
-  
-    <a id="back-link" href="list.html">← 詳細画面へ</a>
-    <a href="list.html">← 商品一覧へ戻る</a>
+  <div id="status"></div>
 
+  <form id="form" class="form">
+    <table class="kv">
+      <tbody>
+        <tr><th>ID</th><td id="v_id">-</td></tr>
+
+        <tr>
+          <th>コード</th>
+          <td><input id="code" type="text" maxlength="50" placeholder="例：SKU-001" /></td>
+        </tr>
+
+        <tr>
+          <th>商品名<span class="req">*</span></th>
+          <td><input id="name" type="text" maxlength="255" required /></td>
+        </tr>
+
+        <tr>
+          <th>カテゴリ</th>
+          <td>
+            <select id="category_id">
+              <option value="">未指定</option>
+            </select>
+          </td>
+        </tr>
+
+        <tr>
+          <th>価格<span class="req">*</span></th>
+          <td><input id="price" type="number" min="0" step="0.01" required /></td>
+        </tr>
+
+        <tr>
+          <th>ホテル</th>
+          <td>
+            <select id="hotel_id">
+              <option value="">共通（未指定）</option>
+            </select>
+          </td>
+        </tr>
+
+        <tr>
+          <th>説明</th>
+          <td><textarea id="description" rows="4" maxlength="1000"></textarea></td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
 
   <script src="../js/common.js"></script>
   <script src="../js/products.js"></script>
-  <script>
-    // ページ表示時に情報読み込み
-    loadProductEdit();
-    // 更新ボタン押下
-    document.getElementById("update-Btn").addEventListener("click", updateProduct);
- 
- </script>
+
 </body>
 </html>

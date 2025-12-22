@@ -5,6 +5,8 @@ from schemas.product_category import (
     ProductCategoryCreate,
     ProductCategoryUpdate
 )
+# from models.product import Product
+
 
 def get_categories(db: Session):
     return (
@@ -48,7 +50,7 @@ def get_category(db: Session, category_id: int):
 
 
 
-def update_category(db: Session, category_id: int, data: ProductCategoryUpdate):
+def update_category_by_id(db: Session, category_id: int, data: ProductCategoryUpdate):
     cat = get_category(db, category_id)
     if not cat:
         return None
@@ -62,11 +64,21 @@ def update_category(db: Session, category_id: int, data: ProductCategoryUpdate):
     db.refresh(cat)
     return cat
 
+
+
 def delete_category(db: Session, category_id: int) -> bool:
-    cat = get_category(db, category_id)
+    cat = (
+        db.query(ProductCategory)
+        .filter(
+            ProductCategory.id == category_id,
+            ProductCategory.delete_flag == 0,
+        )
+        .first()
+    )
     if not cat:
         return False
-
-    db.delete(cat)
+    
+    cat.delete_flag = 1
     db.commit()
+    db.refresh(cat)
     return True

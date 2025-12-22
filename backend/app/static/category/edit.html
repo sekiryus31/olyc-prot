@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="../style/common.css">
   <link rel="stylesheet" href="../style/category.css">
 </head>
-<body>
+<body data-page="category-edit">
   <div class="container">
     <p><a id="backLink" href="detail.html">← 詳細へ戻る</a></p>
 
@@ -15,47 +15,22 @@
 
     <div id="status"></div>
 
-    <form id="form">
-      <div class="field">
-        <label>ID</label>
-        <input id="id" type="text" disabled />
-      </div>
+      <form id="form">
+        <label>カテゴリ名</label>
+        <input id="name" type="text" required placeholder="例：ワイシャツ" />
 
-      <div class="field">
-        <label>コード</label>
-        <input id="code" type="text" maxlength="50" />
-      </div>
+        <!-- sort_order があるなら使う -->
+        <label>表示順（任意）</label>
+        <input id="sort_order" type="number" placeholder="例：10" />
 
-      <div class="field">
-        <label>名前<span class="req">*</span></label>
-        <input id="name" type="text" maxlength="255" required />
-      </div>
-
-      <div class="field">
-        <label>住所</label>
-        <input id="address" type="text" maxlength="255" />
-      </div>
-
-      <div class="field">
-        <label>電話</label>
-        <input id="phone" type="text" maxlength="50" />
-      </div>
-
-      <div class="actions">
-        <button id="saveBtn" type="submit">保存</button>
-        <button id="reloadBtn" type="button">リセット</button>
-      </div>
-    </form>
+        <div class="row">
+          <button id="saveBtn" type="submit">保存</button>
+          <button id="backBtn" type="button">戻る</button>
+        </div>
+      </form>
   </div>
 
   <script src="../js/common.js"></script>
   <script src="../js/categories.js"></script>
-  <script>
-    // ページ表示時に情報読み込み
-    // loadHotelEdit();
-    // 更新ボタン押下
-    // document.getElementById("update-Btn").addEventListener("click", updateHotel);
- 
- </script>
 </body>
 </html>

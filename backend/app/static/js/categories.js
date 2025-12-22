@@ -210,124 +210,206 @@ const API_BASE = "/api/v1";
   }
 
 
-// ===== 共通：URLから id を取る =====
-function getIdFromQuery() {
-  const params = new URLSearchParams(location.search);
-  const id = params.get("id");
-  return id ? String(id) : null;
-}
-
-
-// ============================================================
-// 詳細画面
-// 必須: frm, saveBtn, backBtn, code, name, sortOrder, status
-// ============================================================
-function initDetail() {
-  const statusEl = document.getElementById("status");
-
-  // 表示用DOM（span/div など textContent に入れる想定）
-  const vId = document.getElementById("id");
-  const vCode = document.getElementById("code");
-  const vName = document.getElementById("name");
-  const vSortOrder = document.getElementById("sort_order");
-  const vDeleteFlag = document.getElementById("delete_flag");
-
-  const reloadBtn = document.getElementById("reloadBtn");
-  const editBtn = document.getElementById("editBtn");
-  const deleteBtn = document.getElementById("deleteBtn");
-
-  const params = new URLSearchParams(location.search);
-  const id = params.get("id");
-
-  if (!id) {
-    statusEl.className = "error";
-    statusEl.textContent = "ID が指定されていません（URLに ?id=... が必要）";
-    return;
+  // ===== 共通：URLから id を取る =====
+  function getIdFromQuery() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+    return id ? String(id) : null;
   }
 
-  // config.js で定義しておく（例： const LIST_ENDPOINT = "http://127.0.0.1:8000/api/v1/category";）
-  if (typeof LIST_ENDPOINT === "undefined") {
-    statusEl.className = "error";
-    statusEl.textContent = "LIST_ENDPOINT が未定義です（config.js を確認）";
-    return;
-  }
 
-  if (reloadBtn) reloadBtn.addEventListener("click", loadDetail);
+  // ============================================================
+  // 詳細画面
+  // 必須: frm, saveBtn, backBtn, code, name, sortOrder, status
+  // ============================================================
+  function initDetail() {
+    const statusEl = document.getElementById("status");
 
-  // 編集ボタン（edit.html に飛ばす）
-  if (editBtn) {
-    editBtn.addEventListener("click", () => {
-      location.href = `edit.html?id=${encodeURIComponent(id)}`;
-    });
-  }
+    // 表示用DOM（span/div など textContent に入れる想定）
+    const vId = document.getElementById("id");
+    const vCode = document.getElementById("code");
+    const vName = document.getElementById("name");
+    const vSortOrder = document.getElementById("sort_order");
+    const vDeleteFlag = document.getElementById("delete_flag");
 
-  // 削除ボタン
-  if (deleteBtn) {
-    deleteBtn.addEventListener("click", async () => {
-      const ok = confirm("このカテゴリを削除します。よろしいですか？");
-      if (!ok) return;
+    const reloadBtn = document.getElementById("reloadBtn");
+    const editBtn = document.getElementById("editBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+
+    if (!id) {
+      statusEl.className = "error";
+      statusEl.textContent = "ID が指定されていません（URLに ?id=... が必要）";
+      return;
+    }
+
+    // config.js で定義しておく（例： const LIST_ENDPOINT = "http://127.0.0.1:8000/api/v1/category";）
+    if (typeof LIST_ENDPOINT === "undefined") {
+      statusEl.className = "error";
+      statusEl.textContent = "LIST_ENDPOINT が未定義です（config.js を確認）";
+      return;
+    }
+
+    if (reloadBtn) reloadBtn.addEventListener("click", loadDetail);
+
+    // 編集ボタン（edit.html に飛ばす）
+    if (editBtn) {
+      editBtn.addEventListener("click", () => {
+        location.href = `edit.html?id=${encodeURIComponent(id)}`;
+      });
+    }
+
+    // 削除ボタン
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", async () => {
+        console.log(`${API_BASE}/category/${id}`)
+        if (!id) {
+            alert("ID が指定されていません。");
+            return;
+          }
+
+          const ok = confirm("このカテゴリを削除します。よろしいですか？\n（商品に使用中の場合は削除できません）");
+          if (!ok) return;
+
+          try {
+            const res = await fetch(`${API_BASE}/category/${id}`, {
+              method: "DELETE",
+            });
+
+            // if (res.status === 409) {
+            //   const data = await res.json().catch(() => ({}));
+            //   alert(`削除できません：${data.detail ?? "このカテゴリは使用中です"}`);
+            //   return;
+            // }
+
+            if (!res.ok) {
+              const t = await res.text();
+              throw new Error(`DELETE failed: ${res.status} ${t}`);
+            }
+
+            alert("削除しました");
+            // ✅ 一覧に戻す（あなたのURLに合わせて）
+            location.href = "list.html";
+          } catch (e) {
+            console.error(e);
+            alert("削除に失敗しました");
+          }
+      });
+    }
+
+    async function loadDetail() {
+      statusEl.className = "loading";
+      statusEl.textContent = "読み込み中…";
 
       try {
-        statusEl.className = "loading";
-        statusEl.textContent = "削除中…";
-
+        // 末尾の / を除去してから /{id} を付ける（ダブルスラッシュ事故防止）
         const base = LIST_ENDPOINT.replace(/\/+$/, "");
         const url = `${base}/${encodeURIComponent(id)}`;
 
-        const res = await fetch(url, { method: "DELETE" });
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
 
-        // 削除成功 → 一覧へ
-        location.href = "list.html"; // 一覧ファイル名に合わせて
+        const c = await res.json();
+
+        // 表示反映
+        vId.textContent = c.id ?? "-";
+        vCode.textContent = c.code ?? "";
+        vName.textContent = c.name ?? "";
+        vSortOrder.textContent = (c.sort_order ?? 0);
+        vDeleteFlag.textContent = (c.delete_flag ?? 0);
+
+        statusEl.className = "";
+        statusEl.textContent = "取得OK";
       } catch (err) {
         statusEl.className = "error";
-        statusEl.textContent = `削除に失敗：${err.message}`;
+        statusEl.textContent = `取得に失敗：${err.message}`;
       }
-    });
-  }
 
-  async function loadDetail() {
-    statusEl.className = "loading";
-    statusEl.textContent = "読み込み中…";
-
-    try {
-      // 末尾の / を除去してから /{id} を付ける（ダブルスラッシュ事故防止）
-      const base = LIST_ENDPOINT.replace(/\/+$/, "");
-      const url = `${base}/${encodeURIComponent(id)}`;
-
-      console.log("detail url:", url);
-
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-
-      const c = await res.json();
-
-      // 表示反映
-      vId.textContent = c.id ?? "-";
-      vCode.textContent = c.code ?? "";
-      vName.textContent = c.name ?? "";
-      vSortOrder.textContent = (c.sort_order ?? 0);
-      vDeleteFlag.textContent = (c.delete_flag ?? 0);
-
-      statusEl.className = "";
-      statusEl.textContent = "取得OK";
-    } catch (err) {
-      statusEl.className = "error";
-      statusEl.textContent = `取得に失敗：${err.message}`;
     }
 
+
+    // ===== 初期ロード =====
+    loadDetail();
+    if (reloadBtn) reloadBtn.addEventListener("click", loadDetail);
+    return true; // ← 重要：このページの init は成功した
+
   }
 
 
-  // ===== 初期ロード =====
-  loadDetail();
-  if (reloadBtn) reloadBtn.addEventListener("click", loadDetail);
-  return true; // ← 重要：このページの init は成功した
+  // ============================================================
+  // 編集画面
+  // ============================================================
+  function initEdit() {
+    const API_BASE = "";
 
-}
+    const qs = new URLSearchParams(location.search);
+    const categoryId = qs.get("id");
 
+    const nameEl = document.getElementById("name");
+    const sortEl = document.getElementById("sort_order");
+    const msgEl = document.getElementById("status");
+    const form = document.getElementById("form");
 
+    function showMsg(text, isError=false) {
+      msgEl.textContent = text;
+      msgEl.style.color = isError ? "#c00" : "#0a0";
+    }
 
+    async function loadCategory() {
+      if (!categoryId) {
+        showMsg("id が指定されていません", true);
+        form.querySelector("button[type=submit]").disabled = true;
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/category/${categoryId}`);
+        if (!res.ok) throw new Error(`GET failed: ${res.status}`);
+        const data = await res.json();
+        nameEl.value = data.name ?? "";
+        sortEl.value = (data.sort_order ?? "");
+        showMsg("読み込みOK");
+      } catch (e) {
+        console.error(e);
+        showMsg("カテゴリの読み込みに失敗しました", true);
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!categoryId) return;
+
+      const payload = {
+        name: nameEl.value.trim(),
+        // 空なら送らない（DBのNULL許可ならnullでもOK）
+        sort_order: sortEl.value === "" ? null : Number(sortEl.value),
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/category/${categoryId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(`PUT failed: ${res.status} ${t}`);
+        }
+        await res.json();
+        showMsg("保存しました！");
+      } catch (e) {
+        console.error(e);
+        showMsg("保存に失敗しました", true);
+      }
+    });
+
+    document.getElementById("backBtn").addEventListener("click", () => {
+      history.back();
+    });
+
+    loadCategory();
+  }
 
 
 
@@ -343,6 +425,9 @@ function initDetail() {
       break;
     case "category-detail":
       initDetail();
+      break;
+    case "category-edit":
+      initEdit();
       break;
     default:
       console.warn("Unknown page:", page);

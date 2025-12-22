@@ -18,3 +18,5 @@ class ProductCategory(Base):
         onupdate=func.now(),
         nullable=False
     )
+
+    # products = relationship("Product", back_populates="category")

@@ -1,322 +1,757 @@
-const hotelId = new URLSearchParams(location.search).get("id");
-const productId = new URLSearchParams(window.location.search).get("id");
+document.addEventListener("DOMContentLoaded", () => {
+const LIST_ENDPOINT = "/api/v1/products";
+const API_BASE = "/api/v1";
+
+  // ============================================================
+  // 共通 util
+  // ============================================================
+  function setStatus(el, msg, cls = "") {
+    if (!el) return;
+    el.className = cls || "";
+    el.textContent = msg || "";
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  async function api(path, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+
+    const headers = new Headers(options.headers || {});
+    const hasBody = options.body !== undefined && options.body !== null;
+
+    if (hasBody && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      method,
+      headers,
+    });
+
+    // ★ bodyは一回だけ読む
+    const raw = await res.text();
+
+    // raw が JSON っぽいなら parse（空なら null）
+    const data = raw ? (() => { try { return JSON.parse(raw); } catch { return raw; } })() : null;
+
+    if (!res.ok) {
+      // FastAPIなら detail を優先して見せる
+      const detail =
+        (data && typeof data === "object" && "detail" in data) ? JSON.stringify(data.detail)
+        : (raw || `${res.status} ${res.statusText}`);
+
+      throw new Error(`${res.status} ${res.statusText}: ${detail}`);
+    }
+
+    return data;
+  }
 
 
 
-// 商品情報取得して一覧に表示する
-async function loadProducts() {
-    try {
-        // FastAPI の API を叩く
-        const response = await fetch('/api/v1/products');
-        if (!response.ok) {
-            throw new Error('API error: ' + response.status);
+  // ============================================================
+  // 一覧画面
+  // 必須: q, reloadBtn, newBtn, status, tbl, tbody
+  // ============================================================
+  function initIndex() {
+    const statusEl = document.getElementById("status");
+    const tblEl = document.getElementById("tbl");
+    const tbodyEl = document.getElementById("tbody");
+    const qEl = document.getElementById("q");
+    const reloadBtn = document.getElementById("reloadBtn");
+    const newBtn = document.getElementById("newBtn");
+
+    // null ガード（id間違いで落ちるのを防ぐ）
+    if (!statusEl || !tblEl || !tbodyEl || !qEl || !reloadBtn || !newBtn) {
+        console.warn("[product-list] required elements not found");
+        return;
+    }
+
+    // --- events ---
+    reloadBtn.addEventListener("click", () => load());
+    newBtn.addEventListener("click", () => {
+        // 新規登録画面へ（パスは運用に合わせて調整）
+        location.href = "create.html";
+    });
+
+    // 入力しながら検索（叩きすぎ防止でデバウンス）
+    qEl.addEventListener("input", debounce(() => load(), 250));
+
+    // 初回ロード
+    load();
+
+    // =========================
+    // main
+    // =========================
+    async function load() {
+        try {
+        setStatus("loading", "読み込み中…");
+        tblEl.style.display = "none";
+
+        // クエリ組み立て
+        const params = new URLSearchParams();
+        const q = (qEl.value || "").trim();
+        if (q) params.set("q", q);
+
+        const url = `/api/v1/products${params.toString() ? "?" + params.toString() : ""}`;
+        console.log(url);
+
+        // common.js に apiFetchJson があるならそれを優先、なければ自前fetch
+        const products = await (window.apiFetchJson ? window.apiFetchJson(url) : fetchJson(url));
+
+        render(products || []);
+        tblEl.style.display = "table";
+        setStatus("ok", `OK（${(products || []).length}件）`);
+        } catch (e) {
+        console.error(e);
+        setStatus("error", `取得に失敗：${e.message || e}`);
+        tbodyEl.innerHTML = "";
+        tblEl.style.display = "none";
         }
-
-        const products = await response.json();
-        console.log(products);
-
-        const tbody = document.querySelector('#product-table tbody');
-        tbody.innerHTML = ''; // 初期化
-
-        products.forEach(product => {
-            const tr = document.createElement('tr');
-
-            // クリックで商品詳細ページへ（後で detail 作るなら）
-            tr.addEventListener("click", () => {
-                window.location.href = `/static/product/detail.html?id=${product.id}`;
-            });
-
-            // ID
-            const tdId = document.createElement('td');
-            tdId.textContent = product.id;
-            tr.appendChild(tdId);
-
-            // 商品名
-            const tdName = document.createElement('td');
-            tdName.textContent = product.name;
-            tr.appendChild(tdName);
-
-            // コード
-            const tdCode = document.createElement('td');
-            tdCode.textContent = product.code ?? '';
-            tr.appendChild(tdCode);
-
-            // 基本単価
-            const tdBasePrice = document.createElement('td');
-            tdBasePrice.textContent = product.price ?? '';
-            tr.appendChild(tdBasePrice);
-
-            // カテゴリID
-            const tdCategory = document.createElement('td');
-            tdCategory.textContent = product.category_id ?? '';
-            tr.appendChild(tdCategory);
-
-            tbody.appendChild(tr);
-        });
-
-    } catch (err) {
-        console.error(err);
-        alert('商品一覧の取得に失敗しました');
-    }
-}
-
-
-
-
-// 商品新規登録
-async function createProduct(e) {
-    e.preventDefault();
-
-    const name = document.getElementById("name").value;
-    const code = document.getElementById("code").value;
-    const categoryId = document.getElementById("category_id").value;
-    const basePrice = document.getElementById("price").value;
-    const description = document.getElementById("description").value;
-
-
-    // 必須チェック（ざっくり）
-    if (!name) {
-        alert("商品名を入力してください。");
-        return;
-    }
-    if (!basePrice) {
-        alert("値段を入力してください。");
-        return;
     }
 
-    try {
-        const response = await fetch('/api/v1/products', {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                code: code || null,
-                name: name,
-                description: description || null,
-                category_id: categoryId ? Number(categoryId) : null,
-                // price / tax_rate は Decimal なので文字列で送ってOK
-                price: basePrice,
-                // hotel_id は今回は紐づけないので送らない（= null のまま）
-            })
-        });
+    function render(products) {
+        // 試作品なので「表示項目が無い時はIDなどで埋める」方針
+        tbodyEl.innerHTML = products.map(p => {
+        const id = p.id;
+        const code = p.code || "";
+        const name = p.name || "";
 
-        if (!response.ok) {
-            throw new Error("登録エラー: " + response.status);
+        const categoryText =
+            p.category_name ?? (p.category_id ? `#${p.category_id}` : "—");
+
+        const hotelText =
+            p.hotel_name ?? (p.hotel_id ? `#${p.hotel_id}` : "共通");
+
+        const priceText = formatYen(p.price);
+        const updatedText = formatDateTime(p.updated_at);
+
+        // 行クリックで詳細へ（HTMLが「クリックで詳細へ」なので a ではなく tr クリックに寄せる）
+        return `
+            <tr class="clickable" data-id="${escapeHtml(id)}">
+            <td>${escapeHtml(id)}</td>
+            <td>${escapeHtml(code)}</td>
+            <td>${escapeHtml(name)}</td>
+            <td>${escapeHtml(categoryText)}</td>
+            <td class="num">${escapeHtml(priceText)}</td>
+            <td>${escapeHtml(hotelText)}</td>
+            <td>${escapeHtml(updatedText)}</td>
+            </tr>
+        `;
+        }).join("");
+
+        // 行クリックイベント（tbodyに委譲）
+        tbodyEl.onclick = (ev) => {
+        const tr = ev.target.closest("tr[data-id]");
+        if (!tr) return;
+        const id = tr.getAttribute("data-id");
+        if (!id) return;
+        location.href = `detail.html?id=${encodeURIComponent(id)}`;
+        };
+    }
+
+    // =========================
+    // utils
+    // =========================
+    function setStatus(kind, text) {
+        statusEl.className = kind || "";
+        statusEl.textContent = text || "";
+    }
+
+    async function fetchJson(url) {
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) {
+        // できるだけデバッグしやすいように本文も拾う
+        const body = await res.text().catch(() => "");
+        throw new Error(`${res.status} ${res.statusText}${body ? " / " + body : ""}`);
         }
-
-        alert("商品を登録しました！");
-
-        // 登録後に商品一覧ページへ遷移（ファイル名はお好みで）
-        window.location.href = "list.html";
-
-    } catch (err) {
-        console.error(err);
-        alert("商品の登録に失敗しました。");
+        return await res.json();
     }
-}
+
+    function escapeHtml(v) {
+        return String(v ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatYen(value) {
+        if (value === null || value === undefined || value === "") return "";
+        // DB/JSON で "1200.00" 文字列の場合もあるので Number へ
+        const n = Number(value);
+        if (Number.isNaN(n)) return String(value);
+        return n.toLocaleString("ja-JP", { style: "currency", currency: "JPY" });
+    }
+
+    function formatDateTime(iso) {
+        if (!iso) return "";
+        // "2025-12-22T16:00:00" → "2025-12-22 16:00:00"
+        return String(iso).replace("T", " ").slice(0, 19);
+    }
+
+    function debounce(fn, delayMs) {
+        let t = null;
+        return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), delayMs);
+        };
+    }
+  }
 
 
+// 新規登録画面
+  function initNew() {
+    const statusEl = document.getElementById("status");
+    const backBtn = document.getElementById("backBtn");
+    const saveBtn = document.getElementById("saveBtn");
 
+    const codeEl = document.getElementById("code");
+    const nameEl = document.getElementById("name");
+    const categoryEl = document.getElementById("category_id");
+    const priceEl = document.getElementById("price");
+    const hotelEl = document.getElementById("hotel_id");
+    const descEl = document.getElementById("description");
 
-// 商品詳細情報取得
-async function loadProductDetail() {
-    const detailEl = document.getElementById("detail"); // ホテルと同じIDを使う想定
-
-    if (!productId) {
-        detailEl.textContent = "ID が指定されていません。";
+    if (!statusEl || !backBtn || !saveBtn || !codeEl || !nameEl || !categoryEl || !priceEl || !hotelEl || !descEl) {
+        console.warn("[product-new] required elements not found");
         return;
     }
 
-    try {
-        const response = await fetch(`/api/v1/products/${productId}`);
-        if (!response.ok) {
-            if (response.status === 404) {
-                detailEl.textContent = "指定された商品が見つかりませんでした。";
+    backBtn.addEventListener("click", () => {
+        location.href = "list.html";
+    });
+
+    saveBtn.addEventListener("click", async () => {
+        await save();
+    });
+
+    // 初期データ（カテゴリ/ホテル）
+    loadMasters();
+
+    async function loadMasters() {
+        try {
+        setStatus("loading", "マスタ読込中…");
+
+        const [categories, hotels] = await Promise.all([
+            fetchJson("/api/v1/category"),
+            fetchJson("/api/v1/hotels"),
+        ]);
+
+        renderCategoryOptions(categories || []);
+        renderHotelOptions(hotels || []);
+
+        setStatus("ok", "OK");
+        } catch (e) {
+        console.error(e);
+        setStatus("error", `マスタ取得に失敗：${e.message || e}`);
+        }
+    }
+
+    async function save() {
+        try {
+            const name = (nameEl.value || "").trim();
+            const priceRaw = (priceEl.value || "").trim();
+
+            if (!name) {
+                setStatus("error", "商品名は必須です");
+                nameEl.focus();
                 return;
             }
-            throw new Error("API error: " + response.status);
+            if (!priceRaw) {
+                setStatus("error", "価格は必須です");
+                priceEl.focus();
+                return;
+            }
+
+            setStatus("loading", "登録中…");
+            saveBtn.disabled = true;
+
+            const payload = {
+                code: (codeEl.value || "").trim() || null,
+                name,
+                category_id: categoryEl.value ? Number(categoryEl.value) : null,
+                price: Number(priceRaw), // FastAPI側で Decimal に受けられる（"1200.00" でもOK）
+                hotel_id: hotelEl.value ? Number(hotelEl.value) : null,
+                description: (descEl.value || "").trim() || null,
+            };
+
+            const body = compact(payload);
+            console.log(body);
+
+            const created = await postJson("/api/v1/products", body);
+
+            setStatus("ok", `登録しました（ID: ${created.id}）`);
+            // 登録後は詳細へ飛ぶのが気持ちいい
+            location.href = `detail.html?id=${encodeURIComponent(created.id)}`;
+
+        } catch (e) {
+            console.error(e);
+            setStatus("error", `登録に失敗：${e.message || e}`);
+        } finally {
+            saveBtn.disabled = false;
         }
-
-        const product = await response.json();
-
-        detailEl.innerHTML = `
-        <div>
-            <span class="field-label">ID:</span>
-            <span class="field-value">${product.id}</span>
-        </div>
-        <div>
-            <span class="field-label">商品名:</span>
-            <span class="field-value">${product.name ?? ""}</span>
-        </div>
-        <div>
-            <span class="field-label">コード:</span>
-            <span class="field-value">${product.code ?? ""}</span>
-        </div>
-        <div>
-            <span class="field-label">説明:</span>
-            <span class="field-value">${product.description ?? ""}</span>
-        </div>
-        <div>
-            <span class="field-label">カテゴリID:</span>
-            <span class="field-value">${product.category_id ?? ""}</span>
-        </div>
-        <div>
-            <span class="field-label">基本単価:</span>
-            <span class="field-value">${product.price ?? ""}</span>
-        </div>
-        <div>
-            <span class="field-label">税率:</span>
-            <span class="field-value">${product.tax_rate ?? ""}</span>
-        </div>
-        <div>
-            <span class="field-label">ホテルID:</span>
-            <span class="field-value">${product.hotel_id ?? ""}</span>
-        </div>
-
-        <a href="edit.html?id=${product.id}">
-            <button>更新</button>
-        </a>
-        `;
-
-    } catch (err) {
-        console.error(err);
-        detailEl.textContent = "商品の詳細取得に失敗しました。";
     }
-}
 
+    function renderCategoryOptions(categories) {
+        // 先頭（未指定）を残して作り直し
+        categoryEl.querySelectorAll("option:not(:first-child)").forEach(o => o.remove());
 
-// 編集画面：商品情報をロード
-async function loadProductEdit() {
-
-    // const idInput = document.getElementById("id");
-    const nameInput = document.getElementById("name");
-    const codeInput = document.getElementById("code");
-    const descriptionInput = document.getElementById("description");
-    const categoryInput = document.getElementById("category_id");
-    const priceInput = document.getElementById("price");
-    // const taxRateInput = document.getElementById("tax_rate");
-    // const hotelIdInput = document.getElementById("hotel_id");
-
-    const backLink = document.getElementById("back-link");
-
-    if (productId) {
-        backLink.href = `detail.html?id=${productId}`;
+        categories.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = `${c.code ?? ""} ${c.name ?? ""}`.trim() || `#${c.id}`;
+        categoryEl.appendChild(opt);
+        });
     }
-    if (!productId) {
-        alert("ID が指定されていません。");
+
+    function renderHotelOptions(hotels) {
+        hotelEl.querySelectorAll("option:not(:first-child)").forEach(o => o.remove());
+
+        hotels.forEach(h => {
+        const opt = document.createElement("option");
+        opt.value = h.id;
+        opt.textContent = `${h.code ?? ""} ${h.name ?? ""}`.trim() || `#${h.id}`;
+        hotelEl.appendChild(opt);
+        });
+    }
+
+    function setStatus(kind, text) {
+        statusEl.className = kind || "";
+        statusEl.textContent = text || "";
+    }
+
+    async function fetchJson(url) {
+        // common.js に apiFetchJson があるなら優先
+        if (window.apiFetchJson) return await window.apiFetchJson(url);
+
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`${res.status} ${res.statusText}${t ? " / " + t : ""}`);
+        }
+        return await res.json();
+    }
+
+    async function postJson(url, body) {
+        if (window.apiPostJson) return await window.apiPostJson(url, body);
+
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`${res.status} ${res.statusText}${t ? " / " + t : ""}`);
+        }
+        return await res.json();
+    }
+
+    function compact(obj) {
+        // null/undefined/"" を取り除く（price/name は必須なので残る）
+        const out = {};
+        Object.keys(obj).forEach(k => {
+        const v = obj[k];
+        if (v === null || v === undefined || v === "") return;
+        out[k] = v;
+        });
+        return out;
+    }
+    }
+
+
+
+
+// 詳細画面
+  function initDetail() {
+    const statusEl = document.getElementById("status");
+
+    const backBtn = document.getElementById("backBtn");
+    const editBtn = document.getElementById("editBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+
+    // kv 値表示エリア
+    const vId = document.getElementById("v_id");
+    const vCode = document.getElementById("v_code");
+    const vName = document.getElementById("v_name");
+    const vCategory = document.getElementById("v_category");
+    const vPrice = document.getElementById("v_price");
+    const vHotel = document.getElementById("v_hotel");
+    const vDesc = document.getElementById("v_description");
+    const vCreatedAt = document.getElementById("v_created_at");
+    const vUpdatedAt = document.getElementById("v_updated_at");
+
+    // nullガード（idミスで落ちるのを防ぐ）
+    if (
+        !statusEl || !backBtn || !editBtn || !deleteBtn ||
+        !vId || !vCode || !vName || !vCategory || !vPrice || !vHotel ||
+        !vDesc || !vCreatedAt || !vUpdatedAt
+    ) {
+        console.warn("[product-detail] required elements not found");
         return;
     }
 
-    try {
-        const response = await fetch(`/api/v1/products/${productId}`);
-        if (!response.ok) {
-            alert("商品情報の取得に失敗しました。");
+    const productId = getIdFromQuery();
+    if (!productId) {
+        setStatus("error", "ID が指定されていません（?id=xxx）");
+        return;
+    }
+
+    // --- events ---
+    backBtn.addEventListener("click", () => {
+        location.href = "list.html";
+    });
+
+    editBtn.addEventListener("click", () => {
+        location.href = `edit.html?id=${encodeURIComponent(productId)}`;
+    });
+
+    deleteBtn.addEventListener("click", async () => {
+        if (!confirm("削除しますか？（論理削除）")) return;
+
+        try {
+        setStatus("loading", "削除中…");
+        deleteBtn.disabled = true;
+
+        await deleteJson(`/api/v1/products/${encodeURIComponent(productId)}`);
+
+        setStatus("ok", "削除しました。一覧へ戻ります…");
+        location.href = "list.html";
+        } catch (e) {
+        console.error(e);
+        setStatus("error", `削除に失敗：${e.message || e}`);
+        } finally {
+        deleteBtn.disabled = false;
+        }
+    });
+
+    // 初回ロード
+    load();
+
+    // =========================
+    // main
+    // =========================
+    async function load() {
+        try {
+        setStatus("loading", "読み込み中…");
+
+        const p = await fetchJson(`/api/v1/products/${encodeURIComponent(productId)}`);
+
+        render(p);
+
+        setStatus("ok", "OK");
+        } catch (e) {
+        console.error(e);
+        setStatus("error", `取得に失敗：${e.message || e}`);
+        }
+    }
+
+    function render(p) {
+        // 返ってくる形に応じて「名前が無い場合はID表示」で逃がす（試作品）
+        const categoryText =
+        p.category_name ?? (p.category_id ? `#${p.category_id}` : "—");
+
+        const hotelText =
+        p.hotel_name ?? (p.hotel_id ? `#${p.hotel_id}` : "共通");
+
+        vId.textContent = safeText(p.id, "-");
+        vCode.textContent = safeText(p.code, "—");
+        vName.textContent = safeText(p.name, "—");
+        vCategory.textContent = safeText(categoryText, "—");
+        vPrice.textContent = safeText(formatYen(p.price), "—");
+        vHotel.textContent = safeText(hotelText, "—");
+        vDesc.textContent = safeText(p.description, "—");
+        vCreatedAt.textContent = safeText(formatDateTime(p.created_at), "—");
+        vUpdatedAt.textContent = safeText(formatDateTime(p.updated_at), "—");
+    }
+
+    // =========================
+    // utils
+    // =========================
+    function setStatus(kind, text) {
+        statusEl.className = kind || "";
+        statusEl.textContent = text || "";
+    }
+
+    function getIdFromQuery() {
+        const sp = new URLSearchParams(location.search);
+        return sp.get("id");
+    }
+
+    function safeText(v, fallback = "—") {
+        if (v === null || v === undefined || v === "") return fallback;
+        return String(v);
+    }
+
+    // --- HTTP helpers（common.js にあればそれを優先） ---
+    async function fetchJson(url) {
+        if (window.apiFetchJson) return await window.apiFetchJson(url);
+
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`${res.status} ${res.statusText}${t ? " / " + t : ""}`);
+        }
+        return await res.json();
+    }
+
+    async function deleteJson(url) {
+        if (window.apiDeleteJson) return await window.apiDeleteJson(url);
+
+        const res = await fetch(url, { method: "DELETE", headers: { "Accept": "application/json" } });
+        if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`${res.status} ${res.statusText}${t ? " / " + t : ""}`);
+        }
+
+        // {ok:true} でも空でも良い
+        const txt = await res.text().catch(() => "");
+        return txt ? JSON.parse(txt) : { ok: true };
+    }
+
+    function formatDateTime(iso) {
+        if (!iso) return "";
+        return String(iso).replace("T", " ").slice(0, 19);
+    }
+
+    function formatYen(value) {
+        if (value === null || value === undefined || value === "") return "";
+        const n = Number(value);
+        if (Number.isNaN(n)) return String(value);
+        return n.toLocaleString("ja-JP", { style: "currency", currency: "JPY" });
+    }
+  }
+
+
+
+  // 編集画面
+  function initEdit() {
+    const statusEl = document.getElementById("status");
+    const backBtn = document.getElementById("backBtn");
+    const saveBtn = document.getElementById("saveBtn");
+
+    const vId = document.getElementById("v_id");
+
+    const codeEl = document.getElementById("code");
+    const nameEl = document.getElementById("name");
+    const categoryEl = document.getElementById("category_id");
+    const priceEl = document.getElementById("price");
+    const hotelEl = document.getElementById("hotel_id");
+    const descEl = document.getElementById("description");
+
+    if (!statusEl || !backBtn || !saveBtn || !vId ||
+        !codeEl || !nameEl || !categoryEl || !priceEl || !hotelEl || !descEl) {
+        console.warn("[product-edit] required elements not found");
+        return;
+    }
+
+    const productId = getIdFromQuery();
+    if (!productId) {
+        setStatus("error", "ID が指定されていません（?id=xxx）");
+        return;
+    }
+
+    backBtn.addEventListener("click", () => {
+        location.href = `./detail.html?id=${encodeURIComponent(productId)}`;
+    });
+
+    saveBtn.addEventListener("click", async () => {
+        await save();
+    });
+
+    // 初期ロード（マスタ→詳細）
+    loadAll();
+
+    async function loadAll() {
+        try {
+        setStatus("loading", "読み込み中…");
+
+        // ※あなたの実装に合わせて必要ならURL変更
+        const [categories, hotels] = await Promise.all([
+            fetchJson("/api/v1/category"), // ←違ったら変更
+            fetchJson("/api/v1/hotels"),            // ←違ったら変更
+        ]);
+
+        renderCategoryOptions(categories || []);
+        renderHotelOptions(hotels || []);
+
+        const p = await fetchJson(`/api/v1/products/${encodeURIComponent(productId)}`);
+        fill(p);
+
+        setStatus("ok", "OK");
+        } catch (e) {
+        console.error(e);
+        setStatus("error", `取得に失敗：${e.message || e}`);
+        }
+    }
+
+    function fill(p) {
+        vId.textContent = safeText(p.id, "-");
+
+        codeEl.value = p.code ?? "";
+        nameEl.value = p.name ?? "";
+        priceEl.value = p.price ?? "";
+
+        categoryEl.value = p.category_id ?? "";
+        hotelEl.value = p.hotel_id ?? "";
+
+        descEl.value = p.description ?? "";
+    }
+
+    async function save() {
+        try {
+        const name = (nameEl.value || "").trim();
+        const priceRaw = (priceEl.value || "").trim();
+
+        if (!name) {
+            setStatus("error", "商品名は必須です");
+            nameEl.focus();
+            return;
+        }
+        if (!priceRaw) {
+            setStatus("error", "価格は必須です");
+            priceEl.focus();
             return;
         }
 
-        const product = await response.json();
+        setStatus("loading", "保存中…");
+        saveBtn.disabled = true;
 
-        // フォームに反映
-        // idInput.value = product.id ?? "";
-        nameInput.value = product.name ?? "";
-        codeInput.value = product.code ?? "";
-        descriptionInput.value = product.description ?? "";
-        categoryInput.value = product.category_id ?? "";
-        priceInput.value = product.price ?? "";
-        // taxRateInput.value = product.tax_rate ?? "";
-        // hotelIdInput.value = product.hotel_id ?? "";
-
-    } catch (err) {
-        console.error(err);
-        alert("商品情報の取得でエラーが発生しました。");
-    }
-}
-
-
-// 商品更新処理
-async function updateProduct(e) {
-    e.preventDefault();
-
-    const name = document.getElementById("name").value;
-    const code = document.getElementById("code").value;
-    const description = document.getElementById("description").value;
-    const categoryId = document.getElementById("category_id").value;
-    const basePrice = document.getElementById("price").value;
-    // const taxRate = document.getElementById("tax_rate").value;
-    // const hotelId = document.getElementById("hotel_id").value;
-
-    try {
-        const response = await fetch(`/api/v1/products/${productId}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                name: name,
-                code: code,
-                description: description,
-                category_id: categoryId ? Number(categoryId) : null,
-                price: basePrice,
-                // tax_rate: taxRate || null,
-                // hotel_id: hotelId || null
-            })
+        const payload = compact({
+            // 空文字は null に寄せて「未指定」にできるようにする
+            code: (codeEl.value || "").trim() || null,
+            name,
+            category_id: categoryEl.value ? Number(categoryEl.value) : null,
+            price: Number(priceRaw),
+            hotel_id: hotelEl.value ? Number(hotelEl.value) : null,
+            description: (descEl.value || "").trim() || null,
         });
 
-        if (!response.ok) {
-            throw new Error("更新エラー: " + response.status);
+        const updated = await putJson(
+            `/api/v1/products/${encodeURIComponent(productId)}`,
+            payload
+        );
+
+        fill(updated);
+        setStatus("ok", "保存しました");
+        setTimeout(() => {
+            location.href = `detail.html?id=${encodeURIComponent(updated.id)}`;
+        }, 300);
+        } catch (e) {
+            console.error(e);
+            setStatus("error", `保存に失敗：${e.message || e}`);
+        } finally {
+            saveBtn.disabled = false;
         }
-
-        alert("商品を更新しました！");
-        window.location.href = `detail.html?id=${productId}`;
-
-    } catch (err) {
-        console.error(err);
-        alert("更新に失敗しました。");
-    }
-}
-
-
-// 商品削除
-async function deleteProduct() {
-    if (!productId) {
-        alert("ID が指定されていません。");
-        return;
+        
     }
 
-    const ok = confirm("本当にこの商品を削除しますか？");
-    if (!ok) {
-        return;
+    function renderCategoryOptions(categories) {
+        categoryEl.querySelectorAll("option:not(:first-child)").forEach(o => o.remove());
+        categories.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = `${c.code ?? ""} ${c.name ?? ""}`.trim() || `#${c.id}`;
+        categoryEl.appendChild(opt);
+        });
     }
 
-    try {
-        const response = await fetch(`/api/v1/products/${productId}`, {
-            method: "DELETE"
+    function renderHotelOptions(hotels) {
+        hotelEl.querySelectorAll("option:not(:first-child)").forEach(o => o.remove());
+        hotels.forEach(h => {
+        const opt = document.createElement("option");
+        opt.value = h.id;
+        opt.textContent = `${h.code ?? ""} ${h.name ?? ""}`.trim() || `#${h.id}`;
+        hotelEl.appendChild(opt);
+        });
+    }
+
+    function setStatus(kind, text) {
+        statusEl.className = kind || "";
+        statusEl.textContent = text || "";
+    }
+
+    function getIdFromQuery() {
+        const sp = new URLSearchParams(location.search);
+        return sp.get("id");
+    }
+
+    function safeText(v, fallback = "—") {
+        if (v === null || v === undefined || v === "") return fallback;
+        return String(v);
+    }
+
+    // --- HTTP helpers（common.js があればそれを優先） ---
+    async function fetchJson(url) {
+        if (window.apiFetchJson) return await window.apiFetchJson(url);
+
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`${res.status} ${res.statusText}${t ? " / " + t : ""}`);
+        }
+        return await res.json();
+    }
+
+    async function putJson(url, body) {
+        if (window.apiPutJson) return await window.apiPutJson(url, body);
+
+        const res = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(body),
         });
 
-        if (response.status === 204) {
-            alert("削除しました。");
-            window.location.href = "list.html"; // 商品一覧に戻す
-        } 
-        else if (response.status === 404) {
-            alert("商品が見つかりませんでした。すでに削除済みかもしれません。");
-        } 
-        else {
-            alert("削除に失敗しました。(status: " + response.status + ")");
+        if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`${res.status} ${res.statusText}${t ? " / " + t : ""}`);
         }
-
-    } catch (err) {
-        console.error(err);
-        alert("削除処理でエラーが発生しました。");
+        return await res.json();
     }
-}
+
+    function compact(obj) {
+        const out = {};
+        Object.keys(obj).forEach(k => {
+        const v = obj[k];
+        if (v === null || v === undefined || v === "") return;
+        out[k] = v;
+        });
+        return out;
+    }
+  }
 
 
 
 
+  // 動かすメソッド選定
+  const page = document.body.dataset.page;
 
-// フォームにイベントリスナーを付与（id は好きに合わせて）
-const productForm = document.getElementById("product-form");
-if (productForm) {
-    productForm.addEventListener("submit", createProduct);
-}
+  switch (page) {
+    case "product-list":
+      initIndex();
+      break;
+    case "product-new":
+      initNew();
+      break;
+    case "product-detail":
+      initDetail();
+      break;
+    case "product-edit":
+      initEdit();
+      break;
+    default:
+      console.warn("Unknown page:", page);
+  }
+});
+
+

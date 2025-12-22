@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from db.session import get_db
 from schemas.product_category import ProductCategory, ProductCategoryCreate, ProductCategoryUpdate
-from crud.product_category import get_categories, get_category, update_category, delete_category, create_category
+from crud.product_category import get_categories, get_category, update_category_by_id, delete_category, create_category
 
 # router = APIRouter(prefix="/category", tags=["category"])
 router = APIRouter()
@@ -47,7 +47,7 @@ def update_category_endpoint(
     category = get_category(db, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    return update_category(db, category, category_in)
+    return update_category_by_id(db, category_id, category_in)
 
 
 
@@ -57,8 +57,12 @@ def delete_category_endpoint(
     category_id: int,
     db: Session = Depends(get_db),
 ):
-    category = get_category(db, category_id)
-    if not category:
+    try:
+        ok = delete_category(db, category_id)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    if not ok:
         raise HTTPException(status_code=404, detail="Category not found")
-    delete_category(db, category)
+
     return {"ok": True}
