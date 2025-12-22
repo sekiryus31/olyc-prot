@@ -31,6 +31,8 @@ deactivate
 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
 
 
+git pass
+F:\TechField\forespia\olyc>
 git
 git add .
 git commit -m "update"

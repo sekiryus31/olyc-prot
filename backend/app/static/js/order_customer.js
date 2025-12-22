@@ -1,5 +1,5 @@
 // static/js/app_common.js
-const API_BASE = "http://127.0.0.1:8000/api/v1";
+const API_BASE = "/api/v1";
 const HOTEL_ID = 1; // ★固定（あとで差し替え）
 
 const CART_KEY = `olyc_cart_hotel_${HOTEL_ID}`;

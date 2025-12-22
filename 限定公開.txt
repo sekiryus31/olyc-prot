@@ -1,0 +1,60 @@
+
+f:
+cd F:\TechField\forespia\olyc
+venv\Scripts\activate.bat
+
+
+(venv) F:\TechField\forespia\olyc
+
+
+cd backend\app\
+
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+
+別ターミナル
+cloudflared tunnel --url http://127.0.0.1:8000
+
+これをコピー（最初の方に出てくる）
+https://herb-cause-fighting-unnecessary.trycloudflare.com  
+
+https://herb-cause-fighting-unnecessary.trycloudflare.com/static/operator/index.html
+
+
+止め方
+ctrl + C
+
+運用上の注意（デモ当日の事故防止）
+	cloudflared のウィンドウを閉じない（閉じた瞬間に公開終了）
+	uvicorn（FastAPI）も止めない（APIが死ぬ）
+	PCをスリープさせない（公開が切れる）
+	Windows設定で「スリープしない」に一時的に変更がおすすめ
+	URLは固定じゃない（起動し直すたびに trycloudflare のURLが変わる）
+	“uptime保証なし”（Cloudflare側の都合で落ちる可能性あり：ログにも出てた通り）
+
+
+
+例
+PS F:\TechField\forespia\olyc> cloudflared tunnel --url http://127.0.0.1:8000
+2025-12-22T14:37:14Z INF Thank you for trying Cloudflare Tunnel. Doing so, without a Cloudflare account, is a quick way to experiment and try it out. However, be aware that these account-less Tunnels have no uptime guarantee, are subject to the Cloudflare Online Services Terms of Use (https://www.cloudflare.com/website-terms/), and Cloudflare reserves the right to investigate your use of Tunnels for violations of such terms. If you intend to use Tunnels in production you should use a pre-created named tunnel by following: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps
+2025-12-22T14:37:14Z INF Requesting new quick Tunnel on trycloudflare.com...
+2025-12-22T14:37:17Z INF +--------------------------------------------------------------------------------------------+
+2025-12-22T14:37:17Z INF |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
+2025-12-22T14:37:17Z INF |  https://herb-cause-fighting-unnecessary.trycloudflare.com                                 |
+2025-12-22T14:37:17Z INF +--------------------------------------------------------------------------------------------+
+2025-12-22T14:37:17Z INF Cannot determine default configuration path. No file [config.yml config.yaml] in [~/.cloudflared ~/.cloudflare-warp ~/cloudflare-warp]
+2025-12-22T14:37:17Z INF Version 2025.8.1 (Checksum b5d598b00cc3a28cabc5812d9f762819334614bae452db4e7f23eefe7b081556)
+2025-12-22T14:37:17Z INF GOOS: windows, GOVersion: go1.24.2, GoArch: amd64
+2025-12-22T14:37:17Z INF Settings: map[ha-connections:1 protocol:quic url:http://127.0.0.1:8000]
+2025-12-22T14:37:17Z INF cloudflared will not automatically update on Windows systems.
+2025-12-22T14:37:17Z INF Generated Connector ID: 3ceac5df-4922-49fd-a113-c6bd1e648950
+2025-12-22T14:37:17Z INF Initial protocol quic
+2025-12-22T14:37:17Z INF ICMP proxy will use 192.168.10.125 as source for IPv4
+2025-12-22T14:37:17Z INF ICMP proxy will use 2408:210:9280:e300:fdb5:ec2b:6ba1:b716 in zone Wi-Fi as source for IPv6
+2025-12-22T14:37:17Z ERR Cannot determine default origin certificate path. No file cert.pem in [~/.cloudflared ~/.cloudflare-warp ~/cloudflare-warp]. You need to specify the origin certificate path by specifying the origincert option in the configuration file, or set TUNNEL_ORIGIN_CERT environment variable originCertPath=
+2025-12-22T14:37:17Z INF cloudflared does not support loading the system root certificate pool on Windows. Please use --origin-ca-pool <PATH> to specify the path to the certificate pool
+2025-12-22T14:37:17Z INF ICMP proxy will use 192.168.10.125 as source for IPv4
+2025-12-22T14:37:17Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveP256] connIndex=0 event=0 ip=198.41.192.67
+2025-12-22T14:37:18Z INF ICMP proxy will use 2408:210:9280:e300:fdb5:ec2b:6ba1:b716 in zone Wi-Fi as source for IPv6
+2025-12-22T14:37:18Z INF Starting metrics server on 127.0.0.1:20241/metrics
+2025-12-22T14:37:18Z INF Registered tunnel connection connIndex=0 connection=eaf6fbe1-8a57-41d1-a0c5-6a6cb0241cee event=0 ip=198.41.192.67 location=nrt10 protocol=quic
