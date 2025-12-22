@@ -1,249 +1,352 @@
-const API_BASE = "/api/v1"; // 必要なら "http://localhost:8000/api/v1" に変更
-
-const qEl = document.getElementById("q");
-const statusEl = document.getElementById("status");
-const tbodyEl = document.getElementById("tbody");
-
-const codeEl = document.getElementById("code");
-const nameEl = document.getElementById("name");
-const sortOrderEl = document.getElementById("sort_order");
-
-const reloadBtn = document.getElementById("reload-btn");
-const createBtn = document.getElementById("create-btn");
-
-let categories = [];
-
-function setStatus(text, kind = "") {
-  statusEl.className = "status " + kind;
-  statusEl.textContent = text || "";
-}
-
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-async function api(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-
-  // 失敗はここでまとめて投げる
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const data = await res.json();
-      detail = data?.detail ? JSON.stringify(data.detail) : JSON.stringify(data);
-    } catch {
-      detail = await res.text();
-    }
-    throw new Error(`${res.status} ${res.statusText}: ${detail}`);
-  }
-
-  // DELETE などで body なしの可能性を考慮
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
-}
-
-function render(list) {
-  const q = (qEl.value || "").trim().toLowerCase();
-
-  const filtered = list.filter(c => {
-    const code = (c.code || "").toLowerCase();
-    const name = (c.name || "").toLowerCase();
-    return !q || code.includes(q) || name.includes(q);
-  });
-
-  tbodyEl.innerHTML = filtered.map(c => {
-    const detailUrl = `./detail.html?id=${encodeURIComponent(c.id)}`;
-    return `
-      <tr>
-        <td>${escapeHtml(c.id)}</td>
-        <td>${escapeHtml(c.sort_order ?? "")}</td>
-        <td><span class="badge">${escapeHtml(c.code)}</span></td>
-        <td><a href="${detailUrl}">${escapeHtml(c.name)}</a></td>
-        <td><a href="${detailUrl}">編集</a></td>
-      </tr>
-    `;
-  }).join("");
-
-  setStatus(`表示 ${filtered.length} 件 / 全 ${list.length} 件`, "ok");
-}
-
-async function loadCategories() {
-  setStatus("読み込み中…", "loading");
-  try {
-    categories = await api("/product-categories");
-    // sort_order → id の順に並べたい場合はフロントでも補強
-    categories.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
-    render(categories);
-  } catch (e) {
-    console.error(e);
-    setStatus(e.message, "error");
-  }
-}
-
-async function createCategory() {
-  const code = (codeEl.value || "").trim();
-  const name = (nameEl.value || "").trim();
-  const sort_order_raw = (sortOrderEl.value || "").trim();
-
-  if (!code) return alert("code は必須です");
-  if (!name) return alert("name は必須です");
-
-  const payload = {
-    code,
-    name,
-    sort_order: sort_order_raw === "" ? 0 : Number(sort_order_raw),
-  };
-
-  setStatus("作成中…", "loading");
-  try {
-    await api("/product-categories", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-
-    // 入力をクリア
-    codeEl.value = "";
-    nameEl.value = "";
-    sortOrderEl.value = "";
-
-    await loadCategories();
-    setStatus("作成しました", "ok");
-  } catch (e) {
-    console.error(e);
-    setStatus(e.message, "error");
-    alert(e.message);
-  }
-}
-
-qEl.addEventListener("input", () => render(categories));
-reloadBtn.addEventListener("click", loadCategories);
-createBtn.addEventListener("click", createCategory);
-
-// 初期ロード
-loadCategories();
-
-
-
-
-// product-categories/detail.js
+document.addEventListener("DOMContentLoaded", () => {
+const LIST_ENDPOINT = "/api/v1/category";
 const API_BASE = "/api/v1";
 
-const statusEl = document.getElementById("status");
+  // ============================================================
+  // 共通 util
+  // ============================================================
+  function setStatus(el, msg, cls = "") {
+    if (!el) return;
+    el.className = cls || "";
+    el.textContent = msg || "";
+  }
 
-const idEl = document.getElementById("id");
-const codeEl = document.getElementById("code");
-const nameEl = document.getElementById("name");
-const sortOrderEl = document.getElementById("sort_order");
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
-const saveBtn = document.getElementById("save-btn");
-const deleteBtn = document.getElementById("delete-btn");
+  async function api(path, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
 
-function setStatus(text, kind = "") {
-  statusEl.className = "status " + kind;
-  statusEl.textContent = text || "";
-}
+    const headers = new Headers(options.headers || {});
+    const hasBody = options.body !== undefined && options.body !== null;
 
+    if (hasBody && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      method,
+      headers,
+    });
+
+    // ★ bodyは一回だけ読む
+    const raw = await res.text();
+
+    // raw が JSON っぽいなら parse（空なら null）
+    const data = raw ? (() => { try { return JSON.parse(raw); } catch { return raw; } })() : null;
+
+    if (!res.ok) {
+      // FastAPIなら detail を優先して見せる
+      const detail =
+        (data && typeof data === "object" && "detail" in data) ? JSON.stringify(data.detail)
+        : (raw || `${res.status} ${res.statusText}`);
+
+      throw new Error(`${res.status} ${res.statusText}: ${detail}`);
+    }
+
+    return data;
+  }
+
+
+
+  // ============================================================
+  // 一覧画面
+  // 必須: q, reloadBtn, newBtn, status, tbl, tbody
+  // ============================================================
+  function initIndex() {
+    const qEl = document.getElementById("q");
+    const reloadBtn = document.getElementById("reloadBtn");
+    const newBtn = document.getElementById("newBtn");
+
+    const statusEl = document.getElementById("status");
+    const tblEl = document.getElementById("tbl");
+    const tbodyEl = document.getElementById("tbody");
+
+    // 必須DOMが揃ってなければこの画面ではない
+    if (!qEl || !reloadBtn || !newBtn || !statusEl || !tblEl || !tbodyEl) return false;
+
+    let categories = [];
+
+    function render(list) {
+      const q = (qEl.value || "").trim().toLowerCase();
+
+      const filtered = list.filter(c => {
+        const code = (c.code || "").toLowerCase();
+        const name = (c.name || "").toLowerCase();
+        return !q || code.includes(q) || name.includes(q);
+      });
+
+      tbodyEl.innerHTML = filtered.map(c => {
+        const detailUrl = `detail.html?id=${encodeURIComponent(c.id)}`;
+        return `
+          <tr data-href="${detailUrl}" style="cursor:pointer;">
+            <td>${escapeHtml(c.id)}</td>
+            <td>${escapeHtml(c.sort_order ?? 0)}</td>
+            <td>${escapeHtml(c.code)}</td>
+            <td>${escapeHtml(c.name)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      // 行クリックで詳細へ
+      tbodyEl.querySelectorAll("tr[data-href]").forEach(tr => {
+        tr.addEventListener("click", () => {
+          location.href = tr.dataset.href;
+        });
+      });
+
+      // 表の表示制御
+      tblEl.style.display = filtered.length ? "" : "none";
+      setStatus(statusEl, `表示 ${filtered.length} 件 / 全 ${list.length} 件`, "ok");
+    }
+
+    async function loadCategories() {
+      setStatus(statusEl, "読み込み中...", "loading");
+      tblEl.style.display = "none";
+
+      try {
+        categories = await api("/category");
+        categories.sort(
+          (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || (a.id ?? 0) - (b.id ?? 0)
+        );
+        render(categories);
+      } catch (e) {
+        console.error(e);
+        setStatus(statusEl, e.message, "error");
+      }
+    }
+
+    function goNew() {
+      location.href = "create.html";
+    }
+
+    // events
+    qEl.addEventListener("input", () => render(categories));
+    reloadBtn.addEventListener("click", loadCategories);
+    newBtn.addEventListener("click", goNew);
+
+    // init
+    loadCategories();
+    return true;
+  }
+
+
+
+
+
+  // ============================================================
+  // 新規登録画面
+  // 必須: frm, saveBtn, backBtn, code, name, sortOrder, status
+  // ============================================================
+  function initNew() {
+    const frm = document.getElementById("frm");
+    const saveBtn = document.getElementById("saveBtn");
+    const backBtn = document.getElementById("backBtn");
+
+    const codeEl = document.getElementById("code");
+    const nameEl = document.getElementById("name");
+    const sortOrderEl = document.getElementById("sortOrder");
+
+    const statusEl = document.getElementById("status");
+
+    // 必須DOMが揃ってなければこの画面ではない
+    if (!frm || !saveBtn || !backBtn || !codeEl || !nameEl || !sortOrderEl || !statusEl) return false;
+
+    function goBack() {
+      location.href = "list.html";
+    }
+
+    async function save() {
+      const code = (codeEl.value || "").trim();
+      const name = (nameEl.value || "").trim();
+      const sort_order_raw = (sortOrderEl.value || "").trim();
+
+      if (!code) return alert("コードは必須です");
+      if (!name) return alert("カテゴリ名は必須です");
+
+      const payload = {
+        code,
+        name,
+        sort_order: sort_order_raw === "" ? 0 : Number(sort_order_raw),
+      };
+
+      setStatus(statusEl, "保存中...", "loading");
+
+      try {
+        await api("/category", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        setStatus(statusEl, "登録しました", "ok");
+        alert("新規登録しました");
+        location.href = "list.html";
+      } catch (e) {
+        console.error(e);
+        setStatus(statusEl, e.message, "error");
+        alert(e.message);
+      }
+    }
+
+    backBtn.addEventListener("click", goBack);
+    saveBtn.addEventListener("click", save);
+
+    // Enter（フォーム送信）でも保存
+    frm.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      save();
+    });
+
+    // 初期
+    setStatus(statusEl, "", "");
+    return true;
+  }
+
+
+// ===== 共通：URLから id を取る =====
 function getIdFromQuery() {
   const params = new URLSearchParams(location.search);
-  const v = params.get("id");
-  return v ? Number(v) : null;
+  const id = params.get("id");
+  return id ? String(id) : null;
 }
 
-async function api(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
 
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const data = await res.json();
-      detail = data?.detail ? JSON.stringify(data.detail) : JSON.stringify(data);
-    } catch {
-      detail = await res.text();
-    }
-    throw new Error(`${res.status} ${res.statusText}: ${detail}`);
+// ============================================================
+// 詳細画面
+// 必須: frm, saveBtn, backBtn, code, name, sortOrder, status
+// ============================================================
+function initDetail() {
+  const statusEl = document.getElementById("status");
+
+  // 表示用DOM（span/div など textContent に入れる想定）
+  const vId = document.getElementById("id");
+  const vCode = document.getElementById("code");
+  const vName = document.getElementById("name");
+  const vSortOrder = document.getElementById("sort_order");
+  const vDeleteFlag = document.getElementById("delete_flag");
+
+  const reloadBtn = document.getElementById("reloadBtn");
+  const editBtn = document.getElementById("editBtn");
+  const deleteBtn = document.getElementById("deleteBtn");
+
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id");
+
+  if (!id) {
+    statusEl.className = "error";
+    statusEl.textContent = "ID が指定されていません（URLに ?id=... が必要）";
+    return;
   }
 
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
-}
-
-let categoryId = getIdFromQuery();
-if (!categoryId) {
-  alert("ID が指定されていません");
-  location.href = "./index.html";
-}
-
-async function load() {
-  setStatus("読み込み中…", "loading");
-  try {
-    // 一覧APIに get(id) が無い前提なので、一覧から拾う方式
-    // もし GET /product-categories/{id} を作ってるなら、そっちの方が綺麗。
-    const list = await api("/product-categories");
-    const c = list.find(x => Number(x.id) === Number(categoryId));
-    if (!c) throw new Error("Category not found");
-
-    idEl.value = c.id ?? "";
-    codeEl.value = c.code ?? "";
-    nameEl.value = c.name ?? "";
-    sortOrderEl.value = c.sort_order ?? 0;
-
-    setStatus("読み込み完了", "ok");
-  } catch (e) {
-    console.error(e);
-    setStatus(e.message, "error");
-    alert(e.message);
+  // config.js で定義しておく（例： const LIST_ENDPOINT = "http://127.0.0.1:8000/api/v1/category";）
+  if (typeof LIST_ENDPOINT === "undefined") {
+    statusEl.className = "error";
+    statusEl.textContent = "LIST_ENDPOINT が未定義です（config.js を確認）";
+    return;
   }
-}
 
-async function save() {
-  const code = (codeEl.value || "").trim();
-  const name = (nameEl.value || "").trim();
-  const sort_order = Number((sortOrderEl.value || "0").trim() || "0");
+  if (reloadBtn) reloadBtn.addEventListener("click", loadDetail);
 
-  if (!code) return alert("code は必須です");
-  if (!name) return alert("name は必須です");
-
-  setStatus("保存中…", "loading");
-  try {
-    await api(`/product-categories/${categoryId}`, {
-      method: "PUT",
-      body: JSON.stringify({ code, name, sort_order }),
+  // 編集ボタン（edit.html に飛ばす）
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      location.href = `edit.html?id=${encodeURIComponent(id)}`;
     });
-    setStatus("保存しました", "ok");
-  } catch (e) {
-    console.error(e);
-    setStatus(e.message, "error");
-    alert(e.message);
   }
+
+  // 削除ボタン
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", async () => {
+      const ok = confirm("このカテゴリを削除します。よろしいですか？");
+      if (!ok) return;
+
+      try {
+        statusEl.className = "loading";
+        statusEl.textContent = "削除中…";
+
+        const base = LIST_ENDPOINT.replace(/\/+$/, "");
+        const url = `${base}/${encodeURIComponent(id)}`;
+
+        const res = await fetch(url, { method: "DELETE" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+
+        // 削除成功 → 一覧へ
+        location.href = "list.html"; // 一覧ファイル名に合わせて
+      } catch (err) {
+        statusEl.className = "error";
+        statusEl.textContent = `削除に失敗：${err.message}`;
+      }
+    });
+  }
+
+  async function loadDetail() {
+    statusEl.className = "loading";
+    statusEl.textContent = "読み込み中…";
+
+    try {
+      // 末尾の / を除去してから /{id} を付ける（ダブルスラッシュ事故防止）
+      const base = LIST_ENDPOINT.replace(/\/+$/, "");
+      const url = `${base}/${encodeURIComponent(id)}`;
+
+      console.log("detail url:", url);
+
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+
+      const c = await res.json();
+
+      // 表示反映
+      vId.textContent = c.id ?? "-";
+      vCode.textContent = c.code ?? "";
+      vName.textContent = c.name ?? "";
+      vSortOrder.textContent = (c.sort_order ?? 0);
+      vDeleteFlag.textContent = (c.delete_flag ?? 0);
+
+      statusEl.className = "";
+      statusEl.textContent = "取得OK";
+    } catch (err) {
+      statusEl.className = "error";
+      statusEl.textContent = `取得に失敗：${err.message}`;
+    }
+
+  }
+
+
+  // ===== 初期ロード =====
+  loadDetail();
+  if (reloadBtn) reloadBtn.addEventListener("click", loadDetail);
+  return true; // ← 重要：このページの init は成功した
+
 }
 
-async function del() {
-  if (!confirm("削除（非表示）しますか？\n※ delete_flag=1 になる想定")) return;
 
-  setStatus("削除中…", "loading");
-  try {
-    await api(`/product-categories/${categoryId}`, { method: "DELETE" });
-    setStatus("削除しました", "ok");
-    location.href = "./index.html";
-  } catch (e) {
-    console.error(e);
-    setStatus(e.message, "error");
-    alert(e.message);
+
+
+
+
+  // 動かすメソッド選定
+  const page = document.body.dataset.page;
+
+  switch (page) {
+    case "category-list":
+      initIndex();
+      break;
+    case "category-new":
+      initNew();
+      break;
+    case "category-detail":
+      initDetail();
+      break;
+    default:
+      console.warn("Unknown page:", page);
   }
-}
+});
 
-saveBtn.addEventListener("click", save);
-deleteBtn.addEventListener("click", del);
 
-load();

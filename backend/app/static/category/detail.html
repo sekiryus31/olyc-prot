@@ -3,43 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>カテゴリ編集</title>
+  <title>カテゴリ詳細</title>
   <link rel="stylesheet" href="../style/common.css">
   <link rel="stylesheet" href="../style/category.css">
 </head>
-<body>
-  <div class="toolbar">
-    <a href="./index.html">← 一覧へ</a>
-    <div id="status" class="status"></div>
+<body data-page="category-detail">
+  <h1>カテゴリ詳細</h1>
+
+  <div id="status" class="muted">読み込み中...</div>
+
+  <table class="kv">
+    <tbody>
+      <tr><th>ID</th><td id="id">-</td></tr>
+      <tr><th>コード</th><td id="code">-</td></tr>
+      <tr><th>名前</th><td id="name">-</td></tr>
+      <tr><th>並び順</th><td id="sort_order">-</td></tr>
+      <tr><th>削除フラグ</th><td id="delete_flag">-</td></tr>
+    </tbody>
+  </table>
+
+  <div class="actions">
+    <button id="reloadBtn" type="button">再読み込み</button>
+    <button id="editBtn" type="button">編集</button>
+    <button id="deleteBtn" type="button" class="danger">削除</button>
+    <a href="list.html">一覧へ戻る</a>
   </div>
 
-  <h1>カテゴリ編集</h1>
-
-  <div class="card">
-    <div class="row">
-      <div>
-        <label>ID</label>
-        <input id="id" disabled />
-      </div>
-      <div>
-        <label>code（必須・ユニーク）</label>
-        <input id="code" />
-      </div>
-      <div>
-        <label>name（必須）</label>
-        <input id="name" />
-      </div>
-      <div>
-        <label>sort_order</label>
-        <input id="sort_order" type="number" />
-      </div>
-    </div>
-
-    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <button id="save-btn">保存</button>
-      <button id="delete-btn" class="danger">削除（非表示）</button>
-    </div>
-  </div>
 
   <script src="../js/common.js"></script>
   <script src="../js/categories.js"></script>

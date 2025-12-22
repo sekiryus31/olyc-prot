@@ -6,51 +6,40 @@
   <link rel="stylesheet" href="../style/category.css">
   <title>ホテル登録</title>
 </head>
-<body>
-
-   <div class="wrap">
-    <h1>ホテル新規作成</h1>
-
-    <form id="form">
-      <div class="row">
-        <label for="code">ホテルコード<span class="req">*</span></label>
-        <div>
-          <input id="code" name="code" required maxlength="50" placeholder="例：HTL001" />
-          <div class="muted">ユニーク（重複不可）</div>
-        </div>
-      </div>
-
-      <div class="row">
-        <label for="name">ホテル名<span class="req">*</span></label>
-        <input id="name" name="name" required maxlength="255" placeholder="例：渋谷ホテル" />
-      </div>
-
-      <div class="row">
-        <label for="address">住所</label>
-        <input id="address" name="address" maxlength="255" placeholder="例：東京都渋谷区…" />
-      </div>
-
-      <div class="row">
-        <label for="phone">電話</label>
-        <input id="phone" name="phone" maxlength="50" placeholder="例：03-xxxx-xxxx" />
-      </div>
-
-      <div class="row">
-        <label for="operator_id">運営ID</label>
-        <div>
-          <input id="operator_id" name="operator_id" inputmode="numeric" placeholder="例：1（任意）" />
-          <div class="muted">まずは空でもOK（後で operators を作ったら紐付ける）</div>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button type="button" id="backBtn">一覧に戻る</button>
-        <button class="primary" type="submit" id="saveBtn">保存</button>
-      </div>
-
-      <div id="status" class="status"></div>
-    </form>
+<body data-page="category-new">
+<header>
+  <div>
+    <h1>カテゴリ新規登録</h1>
+    <div class="muted">入力して登録してください</div>
   </div>
+
+  <div class="toolbar">
+    <button id="backBtn">一覧へ戻る</button>
+    <button id="saveBtn">保存</button>
+  </div>
+</header>
+   <div class="wrap">
+      <div id="status" class=""></div>
+
+      <form id="frm">
+        <div class="form-grid">
+          <label>
+            <div class="label">コード（必須・ユニーク）</div>
+            <input id="code" type="text" placeholder="例：FOOD" required />
+          </label>
+
+          <label>
+            <div class="label">カテゴリ名（必須）</div>
+            <input id="name" type="text" placeholder="例：食品" required />
+          </label>
+
+          <label>
+            <div class="label">表示順（任意）</div>
+            <input id="sortOrder" type="number" placeholder="例：10" />
+          </label>
+        </div>
+      </form>
+    </div>
 
   <script src="../js/common.js"></script>
   <script src="../js/categories.js"></script>

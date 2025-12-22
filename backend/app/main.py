@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from core.config import settings
 from api.v1.hotels import router as hotels_router       #ホテル
 from api.v1.product_category import router as category_router       #カテゴリ
+from api.v1.api import api_router
 # from api.v1.products import router as products_router   #商品
 # from api.v1.order import router as orders_router   #注文
 from db.base import Base
@@ -43,8 +44,8 @@ def show_db():
     }
 
 
-app.include_router(hotels_router, prefix=settings.API_V1_PREFIX)
-app.include_router(category_router, prefix=settings.API_V1_PREFIX)
+# app.include_router(hotels_router, prefix=settings.API_V1_PREFIX)
+app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 # app.include_router(products_router, prefix=settings.API_V1_PREFIX)
 # app.include_router(orders_router, prefix=settings.API_V1_PREFIX)
 

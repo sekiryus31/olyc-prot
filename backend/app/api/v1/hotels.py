@@ -9,8 +9,8 @@ from db.session import get_db
 from schemas.hotel import HotelRead, HotelCreate, HotelUpdate, HotelOut
 from crud.hotel import get_hotels, create_hotel, get_hotel, update_hotel, soft_delete_hotel
 
-router = APIRouter(prefix="/hotels", tags=["hotels"])
-
+# router = APIRouter(prefix="/hotels", tags=["hotels"])
+router = APIRouter()
 
 # @router.get("/", response_model=List[Hotel])
 # def list_hotels(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
