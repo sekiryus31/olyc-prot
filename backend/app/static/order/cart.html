@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>注文（カート）</title>
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/order_customer.css">
+</head>
+<body data-page="order-cart">
+  <header class="page-header">
+    <h1>注文（カート）</h1>
+    <nav class="nav">
+      <a class="btn btn-ghost" href="index.html">メニュー</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>注文情報</h2>
+      <div class="grid-2">
+        <div class="kv">
+          <span>hotel</span>
+          <strong id="v_hotel">固定</strong>
+        </div>
+
+        <label class="field">
+          <span>room_no（必須）</span>
+          <input id="room_no" type="text" maxlength="20" placeholder="例: 1203" required />
+        </label>
+      </div>
+      <p id="status-text" class="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>商品を選ぶ</h2>
+      <p class="hint">カテゴリ別に表示。数量はカート側で調整できます。</p>
+
+        <div class="row">
+            <label class="field" style="flex:1">
+                <span>検索</span>
+                <input id="q" type="text" placeholder="商品名/コードで検索" />
+            </label>
+
+            <label class="field" style="width:220px">
+                <span>カテゴリ</span>
+                <select id="category">
+                <option value="">すべて</option>
+                <!-- JSでカテゴリを追加 -->
+                </select>
+            </label>
+        </div>
+
+      <div id="products-root" class="products-root">
+        <!-- JSでカテゴリ別に描画 -->
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>カート</h2>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>商品</th>
+            <th>単価</th>
+            <th>数量</th>
+            <th>小計</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cart-tbody"></tbody>
+      </table>
+
+      <div class="row" style="justify-content: space-between;">
+        <div>
+          <strong>合計：</strong><span id="cart-total">0</span>
+        </div>
+        <button id="to-confirm" class="btn">確認へ</button>
+      </div>
+
+      <p class="hint">※ まだDBには登録しません（確認画面で確定します）</p>
+    </section>
+  </main>
+
+  <script src="../js/common.js"></script>
+  <script src="../js/order_customer.js"></script>
+</body>
+</html>

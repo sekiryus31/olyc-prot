@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>注文完了</title>
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/order_customer.css">
+</head>
+<body data-page="order-complete">
+  <main class="container">
+  <section class="card success-card">
+    <h2>✅ 注文が完了しました</h2>
+    <p class="order-no">
+      注文番号：<strong id="order_no">-</strong>
+    </p>
+    <p class="muted" id="ordered_at">-</p>
+    <p class="hint">この画面は控えです。</p>
+  </section>
+
+  <section class="card">
+    <h3>ご注文内容</h3>
+    <div class="kv-list">
+      <div><span>部屋番号</span><strong id="v_room_no">-</strong></div>
+      <div><span>合計金額</span><strong id="v_total">-</strong></div>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+            <th>商品</th>
+            <th>単価</th>
+            <th>数量</th>
+            <th>小計</th>
+            </tr>
+        </thead>
+        <tbody id="items-tbody"></tbody>
+    </table>
+  </section>
+
+  <section class="card actions">
+    <a href="./cart.html" class="btn">続けて注文する</a>
+    <a href="./index.html" class="btn btn-ghost">注文一覧へ</a>
+  </section>
+</main>
+
+  <script src="../js/common.js"></script>
+  <script src="../js/order_customer.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const orderNo = new URL(location.href).searchParams.get("order_no") || "-";
+      document.getElementById("order_no").textContent = orderNo;
+    });
+  </script>
+</body>
+</html>

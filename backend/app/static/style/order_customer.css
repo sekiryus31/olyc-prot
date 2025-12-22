@@ -1,0 +1,67 @@
+/* 商品カード */
+.products-root{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.product-card{
+  border:1px solid #eee;
+  border-radius:12px;
+  padding: 12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#fff;
+}
+
+.product-title{ font-weight:700; }
+.product-sub{ display:flex; gap:10px; margin-top:6px; }
+.badge{
+  border:1px solid #ddd;
+  border-radius:999px;
+  padding:2px 8px;
+  font-size:12px;
+}
+.muted{ color:#6b7280; }
+
+.qty{ display:flex; gap:8px; align-items:center; }
+.qty-input{
+  width:70px;
+  padding:8px;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  text-align:center;
+}
+
+@media (max-width: 860px){
+  .products-root{ grid-template-columns: 1fr; }
+}
+
+
+.success-card {
+  border: 2px solid #22c55e;
+  background: #f0fdf4;
+}
+
+.order-no {
+  font-size: 1.2rem;
+  margin-top: 8px;
+}
+
+.kv-list div {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+
+.table th:last-child, .table td:last-child { text-align: right; }
+.table th:nth-child(2), .table td:nth-child(2) { text-align: right; }
+.table th:nth-child(3), .table td:nth-child(3) { text-align: right; }

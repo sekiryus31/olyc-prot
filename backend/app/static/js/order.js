@@ -1,256 +1,288 @@
-const params = new URLSearchParams(window.location.search);
-const hotelId = params.get("hotelId");
+// static/js/app_common.js
+const API_BASE = "http://127.0.0.1:8000/api/v1";
 
-const hotelTitleEl = document.getElementById("hotel-title");
-const categorySelect = document.getElementById("category-select");
-const productTbody = document.getElementById("product-tbody");
-const remarkEl = document.getElementById("remark");
-const submitBtn = document.getElementById("submit-btn");
 
-let allProducts = []; // 全商品（このホテル用）
-
-async function init() {
-  if (!hotelId) {
-    alert("hotelId が URL にありません。");
-    return;
+document.addEventListener("DOMContentLoaded", () => {
+  function qs(id) {
+    return document.getElementById(id);
   }
 
-  // ホテル名取得（既存の /api/v1/hotels/{id} を想定）
-  try {
-    const hotelRes = await fetch(`/api/v1/hotels/${hotelId}`);
-    if (hotelRes.ok) {
-      const hotel = await hotelRes.json();
-      hotelTitleEl.textContent = `【${hotel.name}】クリーニング依頼`;
-    }
-  } catch (e) {
-    console.warn("ホテル名取得に失敗しましたが続行します。", e);
+  function getQueryParam(name) {
+    const url = new URL(window.location.href);
+    return url.searchParams.get(name);
   }
 
-  // 商品一覧取得
-  try {
-    const res = await fetch(`/api/v1/products?hotel_id=${hotelId}`);
-    if (!res.ok) {
-      alert("商品一覧の取得に失敗しました。");
-      return;
-    }
-    allProducts = await res.json();
-  } catch (e) {
-    console.error(e);
-    alert("商品一覧取得時にエラーが発生しました。");
-    return;
+  function toIsoFromDatetimeLocal(value) {
+    // "2025-12-25T10:00" -> "2025-12-25T10:00:00"（ブラウザ依存を吸収）
+    if (!value) return null;
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString(); // backendがDateTimeならISOで渡すのが安全
   }
 
-  if (allProducts.length === 0) {
-    alert("登録済みの商品がありません。");
-    return;
+  function fmtDateTime(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString();
   }
 
-  // カテゴリ一覧を作成してセレクトに詰める
-  const categories = Array.from(
-    new Set(allProducts.map((p) => p.category))
-  );
-
-  categorySelect.innerHTML = "";
-  categories.forEach((cat) => {
-    const opt = document.createElement("option");
-    opt.value = cat;
-    opt.textContent = cat;
-    categorySelect.appendChild(opt);
-  });
-
-  // 最初のカテゴリの商品を表示
-  renderProductsForCategory(categories[0]);
-
-  // カテゴリ変更時
-  categorySelect.addEventListener("change", () => {
-    renderProductsForCategory(categorySelect.value);
-  });
-
-  // 提出ボタン
-  submitBtn.addEventListener("click", submitOrder);
-}
-
-function renderProductsForCategory(category) {
-  productTbody.innerHTML = "";
-
-  const products = allProducts.filter((p) => p.category === category);
-
-  products.forEach((p) => {
-    const tr = document.createElement("tr");
-
-    const nameTd = document.createElement("td");
-    nameTd.textContent = p.name;
-
-    const priceTd = document.createElement("td");
-    priceTd.textContent = `${p.price} 円`;
-
-    const qtyTd = document.createElement("td");
-    const input = document.createElement("input");
-    input.type = "number";
-    input.min = "0";
-    input.value = "0";
-    input.dataset.productId = p.id;
-
-    qtyTd.appendChild(input);
-
-    tr.appendChild(nameTd);
-    tr.appendChild(priceTd);
-    tr.appendChild(qtyTd);
-
-    productTbody.appendChild(tr);
-  });
-}
-
-async function submitOrder() {
-  const inputs = productTbody.querySelectorAll("input[type='number']");
-  const items = [];
-
-  inputs.forEach((input) => {
-    const q = parseInt(input.value, 10) || 0;
-    if (q > 0) {
-      items.push({
-        product_id: Number(input.dataset.productId),
-        quantity: q,
-      });
-    }
-  });
-
-  if (items.length === 0) {
-    alert("数量が1以上の品目がありません。");
-    return;
-  }
-
-  const payload = {
-    hotel_id: Number(hotelId),
-    remark: remarkEl.value || null,
-    items: items,
-  };
-
-  try {
-    const res = await fetch("/api/v1/orders", {
-      method: "POST",
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(`${API_BASE}${path}`, {
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      ...options,
+    });
+    if (!res.ok) {
+      let detail = "";
+      try {
+        const j = await res.json();
+        detail = j.detail ? JSON.stringify(j.detail) : JSON.stringify(j);
+      } catch (e) {
+        detail = await res.text();
+      }
+      throw new Error(`HTTP ${res.status}: ${detail}`);
+    }
+    // 204 は body なし
+    if (res.status === 204) return null;
+    return await res.json();
+  }
+
+
+
+  // ============================================================
+  // 一覧画面
+  // ============================================================
+  function initIndex() {
+    const statusText = qs("status-text");
+    const tbody = qs("tbody");
+
+    const hotelIdEl = qs("hotel_id");
+    const roomNoEl = qs("room_no");
+    const statusEl = qs("status");
+
+    qs("search-btn").addEventListener("click", load);
+    qs("reset-btn").addEventListener("click", () => {
+      hotelIdEl.value = "";
+      roomNoEl.value = "";
+      statusEl.value = "";
+      load();
     });
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => null);
-      const msg = errData?.detail || `注文作成に失敗しました (status: ${res.status})`;
-      alert(msg);
+    load();
+
+    async function load() {
+      try {
+        statusText.className = "status loading";
+        statusText.textContent = "読み込み中...";
+
+        const params = new URLSearchParams();
+        if (hotelIdEl.value) params.set("hotel_id", hotelIdEl.value);
+        if (roomNoEl.value) params.set("room_no", roomNoEl.value);
+        if (statusEl.value) params.set("status", statusEl.value);
+
+        const q = params.toString() ? `?${params.toString()}` : "";
+        const orders = await apiFetch(`/orders${q}`);
+
+        tbody.innerHTML = (orders || []).map(o => {
+          const detailUrl = `./detail.html?id=${encodeURIComponent(o.id)}`;
+          return `
+            <tr>
+              <td>${escapeHtml(String(o.id))}</td>
+              <td><a href="${detailUrl}">${escapeHtml(o.order_no || "")}</a></td>
+              <td>${escapeHtml(o.room_no || "")}</td>
+              <td>${escapeHtml(o.status || "")}</td>
+              <td>${escapeHtml(String(o.total_amount ?? ""))}</td>
+              <td>${escapeHtml(fmtDateTime(o.created_at))}</td>
+            </tr>
+          `;
+        }).join("");
+
+        statusText.className = "status ok";
+        statusText.textContent = `取得件数: ${(orders || []).length}`;
+      } catch (e) {
+        statusText.className = "status ng";
+        statusText.textContent = `取得に失敗：${e.message}`;
+        tbody.innerHTML = "";
+      }
+    }
+  }
+
+
+
+
+
+  // ============================================================
+  // 注文画面
+  // ============================================================
+  function initNew() {
+    const statusText = qs("status-text");
+
+    qs("create-btn").addEventListener("click", async () => {
+      try {
+        statusText.className = "status loading";
+        statusText.textContent = "作成中...";
+
+        const payload = {
+          hotel_id: Number(qs("hotel_id").value),
+          room_no: qs("room_no").value.trim(),
+          status: qs("status").value,
+          requested_at: toIsoFromDatetimeLocal(qs("requested_at").value),
+          total_amount: Number(qs("total_amount").value),
+          payment: Number(qs("payment").value),
+          notes: (qs("notes").value || "").trim() || null,
+        };
+
+        // 必須チェック（軽く）
+        if (!payload.hotel_id || !payload.room_no || isNaN(payload.total_amount)) {
+          throw new Error("hotel_id / room_no / total_amount は必須です");
+        }
+
+        const created = await apiFetch("/orders", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        statusText.className = "status ok";
+        statusText.textContent = `作成完了：${created.order_no}`;
+
+        // 詳細へ遷移
+        window.location.href = `./detail.html?id=${encodeURIComponent(created.id)}`;
+      } catch (e) {
+        statusText.className = "status ng";
+        statusText.textContent = `作成に失敗：${e.message}`;
+      }
+    });
+  }
+
+
+
+
+  // ============================================================
+  // 詳細画面
+  // ============================================================
+  function initDetail() {
+    const statusText = qs("status-text");
+    const orderId = getQueryParam("id");
+
+    if (!orderId) {
+      statusText.className = "status ng";
+      statusText.textContent = "ID が指定されていません。";
       return;
     }
 
-    const created = await res.json();
-    alert(`注文を登録しました。注文ID: ${created.id}`);
-    // TODO: 必要なら詳細画面に遷移
-    // location.href = `order_detail.html?orderId=${created.id}`;
-  } catch (e) {
-    console.error(e);
-    alert("注文送信時にエラーが発生しました。");
-  }
-}
+    load();
 
+    qs("update-btn").addEventListener("click", async () => {
+      try {
+        statusText.className = "status loading";
+        statusText.textContent = "更新中...";
 
-const root = document.getElementById("products-root");
-const selectedList = document.getElementById("selected-list");
-const totalPriceEl = document.getElementById("total-price");
+        // PATCH：変更したものだけ送る
+        const patch = {};
+        const statusVal = qs("status").value;
+        const requestedVal = qs("requested_at").value;
+        const paymentVal = qs("payment").value;
+        const notesVal = qs("notes").value;
 
-let selected = new Map(); // product_id => { id, name, price, quantity }
+        if (statusVal) patch.status = statusVal;
+        if (requestedVal) patch.requested_at = toIsoFromDatetimeLocal(requestedVal);
+        if (paymentVal) patch.payment = Number(paymentVal);
+        if (notesVal && notesVal.trim()) patch.notes = notesVal.trim();
 
-document.getElementById("load-products").addEventListener("click", async () => {
-  const hotelId = Number(document.getElementById("hotel-id").value);
-  if (!hotelId) {
-    alert("hotel_id を入れてね");
-    return;
-  }
-
-  const res = await fetch(`/api/v1/products?hotel_id=${hotelId}`);
-  const products = await res.json();
-
-  renderProducts(products);
-});
-
-function renderProducts(products) {
-  root.innerHTML = "";
-
-  // category_name でグループ化
-  const groups = new Map(); // category_name => products[]
-  for (const p of products) {
-    const key = p.category_name ?? "未分類";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(p);
-  }
-
-  for (const [catName, items] of groups.entries()) {
-    const section = document.createElement("div");
-    section.innerHTML = `<h3>${escapeHtml(catName)}</h3>`;
-    const ul = document.createElement("ul");
-
-    for (const p of items) {
-      const li = document.createElement("li");
-
-      // チェック + 数量
-      li.innerHTML = `
-        <label style="display:flex; gap:12px; align-items:center;">
-          <input type="checkbox" data-product-id="${p.id}">
-          <span>${escapeHtml(p.name)}</span>
-          <span style="margin-left:auto;">${Number(p.price).toLocaleString()}円</span>
-          <input type="number" min="1" value="1" data-qty-id="${p.id}" style="width:70px;">
-        </label>
-      `;
-
-      ul.appendChild(li);
-
-      // イベント
-      const checkbox = li.querySelector(`input[type="checkbox"][data-product-id="${p.id}"]`);
-      const qtyInput = li.querySelector(`input[type="number"][data-qty-id="${p.id}"]`);
-
-      checkbox.addEventListener("change", () => {
-        const qty = Number(qtyInput.value || 1);
-        if (checkbox.checked) {
-          selected.set(p.id, { id: p.id, name: p.name, price: Number(p.price), quantity: qty });
-        } else {
-          selected.delete(p.id);
+        if (Object.keys(patch).length === 0) {
+          throw new Error("変更項目がありません");
         }
-        renderSelected();
-      });
 
-      qtyInput.addEventListener("change", () => {
-        if (!selected.has(p.id)) return;
-        const item = selected.get(p.id);
-        item.quantity = Math.max(1, Number(qtyInput.value || 1));
-        selected.set(p.id, item);
-        renderSelected();
-      });
+        await apiFetch(`/orders/${encodeURIComponent(orderId)}`, {
+          method: "PATCH",
+          body: JSON.stringify(patch),
+        });
+
+        statusText.className = "status ok";
+        statusText.textContent = "更新しました";
+        await load();
+      } catch (e) {
+        statusText.className = "status ng";
+        statusText.textContent = `更新に失敗：${e.message}`;
+      }
+    });
+
+    qs("delete-btn").addEventListener("click", async () => {
+      if (!confirm("この注文を削除しますか？（試作：物理削除）")) return;
+
+      try {
+        statusText.className = "status loading";
+        statusText.textContent = "削除中...";
+
+        await apiFetch(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+
+        statusText.className = "status ok";
+        statusText.textContent = "削除しました";
+        window.location.href = "./index.html";
+      } catch (e) {
+        statusText.className = "status ng";
+        statusText.textContent = `削除に失敗：${e.message}`;
+      }
+    });
+
+    async function load() {
+      try {
+        statusText.className = "status loading";
+        statusText.textContent = "読み込み中...";
+
+        const o = await apiFetch(`/orders/${encodeURIComponent(orderId)}`);
+
+        qs("v_id").textContent = o.id ?? "-";
+        qs("v_order_no").textContent = o.order_no ?? "-";
+        qs("v_hotel_id").textContent = o.hotel_id ?? "-";
+        qs("v_room_no").textContent = o.room_no ?? "-";
+        qs("v_total_amount").textContent = o.total_amount ?? "-";
+        qs("v_payment").textContent = o.payment ?? "-";
+        qs("v_created_at").textContent = fmtDateTime(o.created_at);
+        qs("v_updated_at").textContent = fmtDateTime(o.updated_at);
+        qs("v_notes").textContent = o.notes || "";
+
+        statusText.className = "status ok";
+        statusText.textContent = "OK";
+      } catch (e) {
+        statusText.className = "status ng";
+        statusText.textContent = `取得に失敗：${e.message}`;
+      }
     }
 
-    section.appendChild(ul);
-    root.appendChild(section);
-  }
-}
 
-function renderSelected() {
-  selectedList.innerHTML = "";
-  let total = 0;
-
-  for (const item of selected.values()) {
-    total += item.price * item.quantity;
-    const li = document.createElement("li");
-    li.textContent = `${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()}円`;
-    selectedList.appendChild(li);
   }
 
-  totalPriceEl.textContent = total.toLocaleString();
+  // 動かすメソッド選定
+  const page = document.body.dataset.page;
+
+  switch (page) {
+    case "order-list":
+      initIndex();
+      break;
+    case "order-new":
+      initNew();
+      break;
+    case "order-detail":
+      initDetail();
+      break;
+    case "order-edit":
+      initEdit();
+      break;
+    default:
+      console.warn("Unknown page:", page);
+  }
+});
+
+
+/* -------------------------
+ * util
+ * ------------------------- */
+function escapeHtml(s) {
+  return (s || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (m) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-  }[m]));
-}
-
-
-
-
-// ページロード時に初期化
-init();

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/order.css">
+  <title>クリーニング依頼</title>
+</head>
+
+<body data-page="order-list">
+  <header class="page-header">
+    <h1>注文一覧</h1>
+    <nav class="nav">
+      <a class="btn" href="./new.html">＋ 新規注文</a>
+      <a class="btn btn-ghost" href="../index.html">メニュー</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>検索</h2>
+
+      <div class="grid-3">
+        <label class="field">
+          <span>hotel_id</span>
+          <input id="hotel_id" type="number" min="1" placeholder="例: 1" />
+        </label>
+
+        <label class="field">
+          <span>room_no</span>
+          <input id="room_no" type="text" placeholder="例: 1203" />
+        </label>
+
+        <label class="field">
+          <span>status</span>
+          <select id="status">
+            <option value="">（指定なし）</option>
+            <option value="draft">draft</option>
+            <option value="placed" selected>placed</option>
+            <option value="cancelled">cancelled</option>
+            <option value="completed">completed</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="search-btn" class="btn">検索</button>
+        <button id="reset-btn" class="btn btn-ghost">リセット</button>
+      </div>
+
+      <p id="status-text" class="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>一覧</h2>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>注文番号</th>
+            <th>部屋</th>
+            <th>ステータス</th>
+            <th>合計</th>
+            <th>作成日時</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="../js/common.js"></script>
+  <script src="../js/order.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>注文（確認）</title>
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/order_customer.css">
+</head>
+<body data-page="order-confirm">
+  <header class="page-header">
+    <h1>注文 - 確認</h1>
+    <nav class="nav">
+      <a class="btn btn-ghost" href="./cart.html">← 商品選択へ戻る</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- 注文情報 -->
+    <section class="card">
+      <h2>注文情報</h2>
+      <div class="grid-2">
+        <div class="kv"><span>hotel</span><strong id="v_hotel">固定</strong></div>
+        <div class="kv"><span>room_no</span><strong id="v_room_no">-</strong></div>
+      </div>
+      <p id="status-text" class="status"></p>
+    </section>
+
+    <!-- 明細 -->
+    <section class="card">
+      <h2>明細</h2>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>商品</th>
+            <th>単価</th>
+            <th>数量</th>
+            <th>小計</th>
+          </tr>
+        </thead>
+        <tbody id="confirm-tbody"></tbody>
+      </table>
+
+      <div class="row" style="justify-content: space-between;">
+        <div><strong>合計：</strong><span id="confirm-total">¥0.00</span></div>
+
+        <!-- 次に「注文する」実装で押したら API 連携 -->
+        <button id="submit-order" class="btn">注文する</button>
+      </div>
+
+      <p class="hint">
+        ※ 「注文する」を押すと注文が確定します（次のステップでAPI連携）。
+      </p>
+    </section>
+  </main>
+
+  <script src="../js/common.js"></script>
+  <script src="../js/order_customer.js"></script>
+</body>
+</html>

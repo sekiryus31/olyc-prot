@@ -4,7 +4,8 @@ from fastapi import APIRouter
 from api.v1.hotels import router as hotel_router
 from api.v1.product_category import router as category_router
 from api.v1.product import router as product_router
-# from api.v1.orders import router as order_router
+from api.v1.order import router as order_router
+from api.v1.order_item import router as order_item_router
 
 api_router = APIRouter()
 
@@ -26,4 +27,14 @@ api_router.include_router(
     tags=["products"],
 )
 
-# api_router.include_router(order_router, prefix="/orders", tags=["orders"])
+api_router.include_router(
+    order_router,
+    prefix="/orders",
+    tags=["orders"],
+)
+
+api_router.include_router(
+    order_item_router,
+    prefix="/orders/{order_id}/items",
+    tags=["order_items"],
+)

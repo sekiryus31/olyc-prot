@@ -11,6 +11,8 @@ from db.session import engine
 from models.hotel import Hotel
 from models.product_category import ProductCategory
 from models.product import Product
+from models.order import Order
+from models.order_item import OrderItem
 
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
