@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="../style/common.css">
+  <link rel="stylesheet" href="../style/operator.css">
+  <title>Operator Console（試作）</title>
+</head>
+
+<body data-page="order-list">
+ <div class="wrap">
+    <header>
+      <div>
+        <h1>Operator Console（試作）</h1>
+        <div class="sub">
+          管理者向けメニュー。<br/>
+          ホテル／カテゴリ／商品／注文（顧客画面）／注文一覧へ遷移できます。
+        </div>
+      </div>
+
+      <div class="env">
+        <span class="chip">STATIC</span>
+        <span>現在URL：</span>
+        <span id="currentUrl"></span>
+      </div>
+    </header>
+
+    <!-- ★リンク先のパスはここだけ直せばOK（あなたの配置に合わせる） -->
+    <script>
+      // ここをあなたの静的ファイル配置に合わせて調整
+      // operator/index.html から見た相対パスの想定
+      const ROUTES = {
+        hotelList:    "../hotel/list.html",
+        productList:  "../product/list.html",
+        categoryList: "../category/list.html",
+
+        // 注文系（あなたの構成： backend/app/static/order/ 配下）
+        orderPage:    "../order/cart.html",
+        orderList:    "../order/list.html",
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const cur = document.getElementById("currentUrl");
+        cur.textContent = location.href;
+
+        // hrefを一括セット
+        document.getElementById("lnkHotelList").href = ROUTES.hotelList;
+        document.getElementById("lnkProductList").href = ROUTES.productList;
+        document.getElementById("lnkCategoryList").href = ROUTES.categoryList;
+        document.getElementById("lnkOrderPage").href = ROUTES.orderPage;
+        document.getElementById("lnkOrderList").href = ROUTES.orderList;
+
+        // 右クリック不要でURLコピーできるように（見せる用）
+        const copyBtn = document.getElementById("copyUrl");
+        copyBtn.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(location.href);
+            copyBtn.textContent = "コピー済み";
+            setTimeout(() => (copyBtn.textContent = "URLコピー"), 1200);
+          } catch {
+            alert("クリップボードにコピーできませんでした。");
+          }
+        });
+      });
+    </script>
+
+    <div class="grid">
+      <section class="card">
+        <h2>マスタ管理</h2>
+        <p>ホテル／カテゴリ／商品のCRUDへ。</p>
+        <div class="links">
+          <a class="btn" id="lnkHotelList" href="#">🏨 ホテル一覧</a>
+          <a class="btn" id="lnkCategoryList" href="#">🏷️ カテゴリ一覧</a>
+          <a class="btn" id="lnkProductList" href="#">🧺 商品一覧</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>注文</h2>
+        <p>顧客用の注文ページ／オペレーター用の注文一覧へ。</p>
+        <div class="links">
+          <a class="btn" id="lnkOrderPage" href="#">🛒 注文ページ（cart）</a>
+          <a class="btn" id="lnkOrderList" href="#">📦 注文一覧</a>
+        </div>
+        <div class="hint">
+          注文詳細は注文一覧→詳細リンク（<code>detail.html?id=...</code>）から遷移。
+        </div>
+      </section>
+
+      <!-- <section class="card" style="grid-column: span 12;">
+        <h2>共有用</h2>
+        <p>「見せるための試作品」として、URLを渡しやすいように。</p>
+        <div class="links">
+          <a class="btn" href="javascript:void(0)" id="copyUrl">🔗 URLコピー</a>
+          <a class="btn" href="../order/list.html" target="_blank" rel="noreferrer">🧪 注文一覧（別タブ）</a>
+        </div>
+        <div class="warn">
+          もしホテル／商品／カテゴリのHTMLが <code>../hotel/list.html</code> 等に存在しない場合は、
+          上部の <code>ROUTES</code> をあなたの実ファイル構成に合わせて修正してね。
+          <br/>
+          （例）<code>../operator/hotel/list.html</code> みたいな配置ならそこに合わせる。
+        </div>
+      </section> -->
+    </div>
+  </div>
+  <script src="../js/common.js"></script>
+</body>
+</html>

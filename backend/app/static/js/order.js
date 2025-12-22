@@ -112,144 +112,151 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // ============================================================
-  // 注文画面
-  // ============================================================
-  function initNew() {
-    const statusText = qs("status-text");
-
-    qs("create-btn").addEventListener("click", async () => {
-      try {
-        statusText.className = "status loading";
-        statusText.textContent = "作成中...";
-
-        const payload = {
-          hotel_id: Number(qs("hotel_id").value),
-          room_no: qs("room_no").value.trim(),
-          status: qs("status").value,
-          requested_at: toIsoFromDatetimeLocal(qs("requested_at").value),
-          total_amount: Number(qs("total_amount").value),
-          payment: Number(qs("payment").value),
-          notes: (qs("notes").value || "").trim() || null,
-        };
-
-        // 必須チェック（軽く）
-        if (!payload.hotel_id || !payload.room_no || isNaN(payload.total_amount)) {
-          throw new Error("hotel_id / room_no / total_amount は必須です");
-        }
-
-        const created = await apiFetch("/orders", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-
-        statusText.className = "status ok";
-        statusText.textContent = `作成完了：${created.order_no}`;
-
-        // 詳細へ遷移
-        window.location.href = `./detail.html?id=${encodeURIComponent(created.id)}`;
-      } catch (e) {
-        statusText.className = "status ng";
-        statusText.textContent = `作成に失敗：${e.message}`;
-      }
-    });
-  }
-
-
-
-
-  // ============================================================
   // 詳細画面
   // ============================================================
   function initDetail() {
-    const statusText = qs("status-text");
-    const orderId = getQueryParam("id");
+    // ===== 設定（必要なら /api/v1 を合わせて） =====
+    const API_BASE = "/api/v1";
 
-    if (!orderId) {
-      statusText.className = "status ng";
-      statusText.textContent = "ID が指定されていません。";
-      return;
+    // ===== util =====
+    const el = (id) => document.getElementById(id);
+    const money = (s) => (s == null ? "-" : Number(s).toLocaleString("ja-JP", { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
+    const setMsg = (text, type="") => {
+      el("msg").className = type ? type : "muted";
+      el("msg").textContent = text || "";
+    };
+    const getOrderIdFromQuery = () => {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("id");
+    };
+    const isoToLocalInput = (iso) => {
+      // "2025-12-22T13:31:06" -> "2025-12-22T13:31"
+      if (!iso) return "";
+      const d = new Date(iso);
+      // ブラウザのローカルに合わせて yyyy-MM-ddTHH:mm
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    const localInputToISO = (val) => {
+      // "yyyy-MM-ddTHH:mm" -> ISO (秒は00)
+      if (!val) return null;
+      const d = new Date(val);
+      return d.toISOString(); // APIがローカル想定ならここは要調整
+    };
+
+    // ===== API =====
+    async function apiGet(path) {
+      const r = await fetch(`${API_BASE}${path}`, { headers: { "Accept":"application/json" } });
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+      return await r.json();
     }
 
-    load();
-
-    qs("update-btn").addEventListener("click", async () => {
-      try {
-        statusText.className = "status loading";
-        statusText.textContent = "更新中...";
-
-        // PATCH：変更したものだけ送る
-        const patch = {};
-        const statusVal = qs("status").value;
-        const requestedVal = qs("requested_at").value;
-        const paymentVal = qs("payment").value;
-        const notesVal = qs("notes").value;
-
-        if (statusVal) patch.status = statusVal;
-        if (requestedVal) patch.requested_at = toIsoFromDatetimeLocal(requestedVal);
-        if (paymentVal) patch.payment = Number(paymentVal);
-        if (notesVal && notesVal.trim()) patch.notes = notesVal.trim();
-
-        if (Object.keys(patch).length === 0) {
-          throw new Error("変更項目がありません");
-        }
-
-        await apiFetch(`/orders/${encodeURIComponent(orderId)}`, {
-          method: "PATCH",
-          body: JSON.stringify(patch),
-        });
-
-        statusText.className = "status ok";
-        statusText.textContent = "更新しました";
-        await load();
-      } catch (e) {
-        statusText.className = "status ng";
-        statusText.textContent = `更新に失敗：${e.message}`;
+    async function apiPatch(path, body) {
+      const r = await fetch(`${API_BASE}${path}`, {
+        method: "PATCH",
+        headers: { "Content-Type":"application/json", "Accept":"application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(()=> "");
+        throw new Error(`${r.status} ${r.statusText} ${t}`);
       }
-    });
+      return await r.json();
+    }
 
-    qs("delete-btn").addEventListener("click", async () => {
-      if (!confirm("この注文を削除しますか？（試作：物理削除）")) return;
+    // ===== 描画 =====
+    function renderOrder(o) {
+      el("orderId").textContent = o.id ?? "-";
+      el("orderNo").textContent = o.order_no ? `#${o.order_no}` : "（番号なし）";
+      el("hotelId").textContent = o.hotel_id ?? "-";
+      el("roomNo").textContent = o.room_no ?? "-";
+      el("totalAmount").textContent = money(o.total_amount);
+      el("createdAt").textContent = o.created_at ?? "-";
+      el("updatedAt").textContent = o.updated_at ?? "-";
 
-      try {
-        statusText.className = "status loading";
-        statusText.textContent = "削除中...";
+      el("statusPill").textContent = o.status ?? "-";
 
-        await apiFetch(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+      // 編集欄へ反映
+      if (o.status != null) el("statusSelect").value = o.status;
+      if (o.payment != null) el("paymentSelect").value = String(o.payment);
+      el("requestedAt").value = isoToLocalInput(o.requested_at);
+      el("notes").value = o.notes ?? "";
+    }
 
-        statusText.className = "status ok";
-        statusText.textContent = "削除しました";
-        window.location.href = "./index.html";
-      } catch (e) {
-        statusText.className = "status ng";
-        statusText.textContent = `削除に失敗：${e.message}`;
+    function renderItems(items) {
+      const tb = el("itemsTbody");
+      tb.innerHTML = "";
+
+      if (!items || items.length === 0) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="6" class="muted">明細がありません</td>`;
+        tb.appendChild(tr);
+        return;
       }
-    });
 
-    async function load() {
-      try {
-        statusText.className = "status loading";
-        statusText.textContent = "読み込み中...";
-
-        const o = await apiFetch(`/orders/${encodeURIComponent(orderId)}`);
-
-        qs("v_id").textContent = o.id ?? "-";
-        qs("v_order_no").textContent = o.order_no ?? "-";
-        qs("v_hotel_id").textContent = o.hotel_id ?? "-";
-        qs("v_room_no").textContent = o.room_no ?? "-";
-        qs("v_total_amount").textContent = o.total_amount ?? "-";
-        qs("v_payment").textContent = o.payment ?? "-";
-        qs("v_created_at").textContent = fmtDateTime(o.created_at);
-        qs("v_updated_at").textContent = fmtDateTime(o.updated_at);
-        qs("v_notes").textContent = o.notes || "";
-
-        statusText.className = "status ok";
-        statusText.textContent = "OK";
-      } catch (e) {
-        statusText.className = "status ng";
-        statusText.textContent = `取得に失敗：${e.message}`;
+      for (const it of items) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${it.id ?? ""}</td>
+          <td>${it.product_id ?? ""}</td>
+          <td>${it.product_name ?? ""}</td>
+          <td class="num">${money(it.unit_price)}</td>
+          <td class="num">${it.qty ?? ""}</td>
+          <td class="num">${money(it.line_amount)}</td>
+        `;
+        tb.appendChild(tr);
       }
     }
 
+    // ===== ロード =====
+    let currentOrderId = null;
+    loadAll();
+    el("btnReload").addEventListener("click", loadAll);
+    el("btnUpdate").addEventListener("click", updateOrder);
+
+    async function loadAll() {
+      const id = getOrderIdFromQuery();
+      if (!id) {
+        setMsg("URLに id がありません（例：detail.html?id=2）", "error");
+        return;
+      }
+      currentOrderId = id;
+
+      setMsg("読み込み中…");
+      try {
+        const [order, items] = await Promise.all([
+          apiGet(`/orders/${id}`),
+          apiGet(`/orders/${id}/items`),
+        ]);
+        renderOrder(order);
+        renderItems(items);
+        setMsg("");
+      } catch (e) {
+        setMsg(`取得に失敗しました：${e.message}`, "error");
+        el("itemsTbody").innerHTML = `<tr><td colspan="6" class="error">取得エラー</td></tr>`;
+      }
+    }
+
+    // ===== 更新 =====
+    async function updateOrder() {
+      if (!currentOrderId) return;
+
+      const body = {
+        status: el("statusSelect").value,
+        payment: Number(el("paymentSelect").value),
+        requested_at: localInputToISO(el("requestedAt").value),
+        notes: el("notes").value || null,
+      };
+
+      setMsg("更新中…");
+      try {
+        const updated = await apiPatch(`/orders/${currentOrderId}`, body);
+        renderOrder(updated);
+        setMsg("更新しました。", "ok");
+      } catch (e) {
+        setMsg(`更新に失敗しました：${e.message}`, "error");
+      }
+    }
 
   }
 

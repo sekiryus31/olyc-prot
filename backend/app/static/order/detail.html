@@ -8,73 +8,92 @@
 </head>
 
 <body data-page="order-detail">
-  <header class="page-header">
-    <h1>注文作成</h1>
-    <nav class="nav">
-      <a class="btn btn-ghost" href="./index.html">← 一覧へ</a>
-    </nav>
-  </header>
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <div class="muted">注文詳細</div>
+        <h1 style="margin:6px 0 0;">
+          <span id="orderNo">（読み込み中）</span>
+          <span class="status-pill" id="statusPill">-</span>
+        </h1>
+      </div>
+      <div class="actions">
+        <a class="ghost" href="list.html">← 一覧へ戻る</a>
+      </div>
+    </div>
 
-  <main class="container">
-    <section class="card">
-      <h2>入力</h2>
+    <div id="msg" class="muted"></div>
 
-      <div class="grid-2">
-        <label class="field">
-          <span>hotel_id *</span>
-          <input id="hotel_id" type="number" min="1" required />
-        </label>
-
-        <label class="field">
-          <span>room_no *</span>
-          <input id="room_no" type="text" maxlength="20" required placeholder="例: 1203" />
-        </label>
-
-        <label class="field">
-          <span>status</span>
-          <select id="status">
-            <option value="draft">draft</option>
-            <option value="placed" selected>placed</option>
-            <option value="cancelled">cancelled</option>
-            <option value="completed">completed</option>
-          </select>
-        </label>
-
-        <label class="field">
-          <span>requested_at（希望日時）</span>
-          <input id="requested_at" type="datetime-local" />
-        </label>
-
-        <label class="field">
-          <span>payment *</span>
-          <select id="payment">
-            <option value="1" selected>1: Olyc</option>
-            <option value="2">2: ホテル</option>
-            <option value="3">3: その他</option>
-          </select>
-        </label>
-
-        <label class="field">
-          <span>total_amount *</span>
-          <input id="total_amount" type="number" step="0.01" min="0" required placeholder="例: 8800.00" />
-        </label>
+    <div class="row">
+      <!-- 注文ヘッダ（参照） -->
+      <div class="card">
+        <div class="title">注文情報</div>
+        <div class="kv">
+          <div class="k">注文ID</div><div class="v" id="orderId">-</div>
+          <div class="k">ホテルID</div><div class="v" id="hotelId">-</div>
+          <div class="k">部屋番号</div><div class="v" id="roomNo">-</div>
+          <div class="k">合計金額</div><div class="v" id="totalAmount">-</div>
+          <div class="k">作成日時</div><div class="v" id="createdAt">-</div>
+          <div class="k">更新日時</div><div class="v" id="updatedAt">-</div>
+        </div>
       </div>
 
-      <label class="field">
-        <span>notes</span>
-        <textarea id="notes" rows="4" maxlength="2000" placeholder="伝達事項"></textarea>
-      </label>
+      <!-- 最小限の編集（ステータス/支払/希望日/備考） -->
+      <div class="card">
+        <div class="title">更新（最小限）</div>
 
-      <div class="row">
-        <button id="create-btn" class="btn">作成</button>
-        <span id="status-text" class="status"></span>
+        <label for="statusSelect">ステータス</label>
+        <select id="statusSelect">
+          <!-- あなたの enum に合わせて増減OK -->
+          <option value="placed">placed（受付）</option>
+          <option value="in_progress">in_progress（作業中）</option>
+          <option value="completed">completed（完了）</option>
+          <option value="canceled">canceled（キャンセル）</option>
+        </select>
+
+        <label for="paymentSelect">支払い方法</label>
+        <select id="paymentSelect">
+          <!-- payment が 1/2/3... の想定。表示は好きに -->
+          <option value="1">1（現金）</option>
+          <option value="2">2（掛け）</option>
+          <option value="3">3（クレカ）</option>
+        </select>
+
+        <label for="requestedAt">希望日時（requested_at）</label>
+        <!-- ISO文字列を入れる想定。未入力OK -->
+        <input id="requestedAt" type="datetime-local" />
+
+        <label for="notes">備考</label>
+        <textarea id="notes" placeholder="例）フロント預かり／急ぎ など"></textarea>
+
+        <div class="actions">
+          <button class="primary" id="btnUpdate">更新する</button>
+          <button class="ghost" id="btnReload" type="button">再読込</button>
+          <span class="muted">※ 明細は編集不可（確定情報として固定）</span>
+        </div>
       </div>
+    </div>
 
-      <p class="hint">
-        ※ order_no はサーバ側で採番されます（例: 20251221-000123）
-      </p>
-    </section>
-  </main>
+    <!-- 明細（編集不可） -->
+    <div class="card" style="margin-top:16px;">
+      <div class="title">明細（編集不可）</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 70px;">ID</th>
+            <th style="width: 90px;">商品ID</th>
+            <th>商品名</th>
+            <th style="width: 140px;" class="num">単価</th>
+            <th style="width: 80px;" class="num">数量</th>
+            <th style="width: 160px;" class="num">金額</th>
+          </tr>
+        </thead>
+        <tbody id="itemsTbody">
+          <tr><td colspan="6" class="muted">読み込み中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <script src="../js/common.js"></script>
   <script src="../js/order.js"></script>
