@@ -19,7 +19,7 @@ cloudflared tunnel --url http://127.0.0.1:8000
 https://herb-cause-fighting-unnecessary.trycloudflare.com  
 
 https://herb-cause-fighting-unnecessary.trycloudflare.com/static/operator/index.html
-
+https://answered-cheats-penalties-globe.trycloudflare.com/static/operator/index.html
 
 止め方
 ctrl + C

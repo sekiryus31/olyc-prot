@@ -153,7 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="product-main">
                     <div class="product-title">${escapeHtml(p.name || "")}</div>
                     <div class="product-sub">
-                    <span class="badge">${escapeHtml(p.code || "")}</span>
                     <span class="muted">¥${escapeHtml(String(price.toFixed(2)))}</span>
                     </div>
                 </div>

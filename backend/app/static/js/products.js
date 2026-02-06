@@ -105,15 +105,17 @@ const API_BASE = "/api/v1";
 
         // common.js に apiFetchJson があるならそれを優先、なければ自前fetch
         const products = await (window.apiFetchJson ? window.apiFetchJson(url) : fetchJson(url));
+        console.log(products)
+        // const c = await fetchJson(`/api/v1/category/${encodeURIComponent(products.category_id)}`);
 
         render(products || []);
         tblEl.style.display = "table";
         setStatus("ok", `OK（${(products || []).length}件）`);
         } catch (e) {
-        console.error(e);
-        setStatus("error", `取得に失敗：${e.message || e}`);
-        tbodyEl.innerHTML = "";
-        tblEl.style.display = "none";
+            console.error(e);
+            setStatus("error", `取得に失敗：${e.message || e}`);
+            tbodyEl.innerHTML = "";
+            tblEl.style.display = "none";
         }
     }
 
@@ -125,7 +127,7 @@ const API_BASE = "/api/v1";
         const name = p.name || "";
 
         const categoryText =
-            p.category_name ?? (p.category_id ? `#${p.category_id}` : "—");
+            p.category_name ?? (p.n ? `${p.n}` : "—");
 
         const hotelText =
             p.hotel_name ?? (p.hotel_id ? `#${p.hotel_id}` : "共通");
@@ -205,7 +207,7 @@ const API_BASE = "/api/v1";
         t = setTimeout(() => fn(...args), delayMs);
         };
     }
-  }
+}
 
 
 // 新規登録画面
@@ -446,8 +448,9 @@ const API_BASE = "/api/v1";
         setStatus("loading", "読み込み中…");
 
         const p = await fetchJson(`/api/v1/products/${encodeURIComponent(productId)}`);
-
-        render(p);
+        const c = await fetchJson(`/api/v1/category/${encodeURIComponent(p.category_id)}`);
+        console.log(c);
+        render(p, c);
 
         setStatus("ok", "OK");
         } catch (e) {
@@ -456,11 +459,11 @@ const API_BASE = "/api/v1";
         }
     }
 
-    function render(p) {
+    function render(p, c) {
         // 返ってくる形に応じて「名前が無い場合はID表示」で逃がす（試作品）
         const categoryText =
-        p.category_name ?? (p.category_id ? `#${p.category_id}` : "—");
-
+        p.category_name ?? (c.name ? `#${c.name}` : "—");
+        console.log(c);
         const hotelText =
         p.hotel_name ?? (p.hotel_id ? `#${p.hotel_id}` : "共通");
 
